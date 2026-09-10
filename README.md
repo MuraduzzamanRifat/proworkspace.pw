@@ -309,6 +309,79 @@ Recommended before spending on ads:
 
 ---
 
+## Admin CMS
+
+Sign in at `/admin/login`. Navigation is filtered by role; every page and
+every action re-checks the session and a capability on the server.
+
+**Landing page** (`/admin/landing`) is a page builder: sections in draft
+order with enable, move, duplicate (bonus sections only), soft delete and
+"discard draft". Each section opens a structured editor generated from its
+field spec (`src/cms/registry.ts`): text, multi-line, lists with add/remove/
+reorder, image URL with live preview and alt text, CTA with a fixed set of
+actions (checkout, scroll to section, external https link, internal page,
+none), predefined theme/layout options. Edits autosave to the **draft** after
+1.5 s; the status line says unsaved / saving / saved at HH:MM / failed with
+the server's reason. Leaving with unsaved changes triggers the browser
+warning.
+
+**Preview** (`/admin/preview`) renders the draft through the same component
+as the public page, behind the session, with a banner and `noindex`.
+
+**Publish** runs the gate in `src/cms/publish.ts` — empty hero headline, a
+CTA with no destination, a scroll target that is disabled, no active offer,
+a zero-price offer, an invalid URL, an empty SEO title all block; cosmetic
+gaps warn — then copies every section's draft to published in one
+transaction, appends a `page_versions` snapshot, writes an audit row and
+calls `revalidatePath('/')` so the next visitor gets the new HTML. Nothing
+reaches customers on save; only Publish changes production.
+
+**Versions** (`/admin/landing/versions`): every publish is a version with
+who, when and which sections changed. "Restore" copies a version into the
+draft; the admin previews and publishes, and that publish records
+`restoredFrom`. History is append-only.
+
+**Other screens:** Offers (the only place the charged price changes;
+audited; revalidates), Products (names and deliverable labels), Coupons
+(create, activate; the checkout shows a coupon field only when the
+"coupons" setting is on and previews the discount via `/api/coupon` before
+the order exists), Customers, Media (paste an https URL and it is fetched
+and probed with sharp before being accepted; uploads convert to WebP at
+three widths via Vercel Blob once a Blob store is attached), Users
+(create, role, deactivate; last super admin protected), Audit log (before/
+after per action), Settings (only keys the code reads: sticky mobile CTA,
+coupon field, download cap per order, support email).
+
+**Rich text:** long fields accept `**bold**`, `*italic*`, `[text](https://…)`
+and line breaks. The tokeniser emits React elements; HTML in any field is
+stored and rendered as literal text.
+
+**Failure safety:** if the database is unreachable the landing page renders
+the built-in defaults (the same content the seed wrote) and logs the error;
+ISR serves the last good HTML for a further minute regardless.
+
+### End-to-end tests (real browser, real database)
+
+```bash
+npm run build && npm start            # or next start -p 3131
+node --env-file=.env.local scripts/e2e-cms.mjs http://localhost:3131
+node --env-file=.env.local scripts/e2e-security.mjs http://localhost:3131
+```
+
+`e2e-cms.mjs` performs the exact chain from the CMS brief: record the live
+headline, log in, change headline and image, autosave, verify production is
+unchanged, verify the preview changed, publish, verify production changed,
+mobile fit, CTA, checkout price, restore the previous version, publish,
+verify production is back. `e2e-security.mjs` checks signed-out redirects, a
+direct server-action call without a session, what a Customer Support user
+can see and do, a stored-XSS headline (rendered escaped, no dialog fires),
+and a `javascript:` image URL (refused by the server).
+
+Both drive Microsoft Edge through `puppeteer-core`. Edge 152's `msedge.exe`
+is a launcher that hands off and exits 0, which `puppeteer.launch` misreads
+as a crash; the scripts spawn Edge with a debugging port and connect over CDP
+instead. Screenshots land in `.e2e-shots/` (git-ignored).
+
 ## Scheduled jobs
 
 `vercel.json` registers one cron: `/api/cron/dispatch-tracking`, daily at

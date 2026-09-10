@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { Flash } from '@/components/admin/Flash'
 import { missingPolicies } from '@/config/site'
 import { formatBdt, poisha } from '@/domain/money'
 import { STATE_LABELS_BN } from '@/domain/order-state'
@@ -46,6 +47,9 @@ export default async function AdminDashboard({
           ))}
         </nav>
       </div>
+
+      {/* Permission redirects from other screens land here with ?error=; show it. */}
+      <Flash params={params} />
 
       <nav aria-label="শর্টকাট" className="flex flex-wrap gap-2 text-sm">
         <Link href="/admin/landing" className="rounded-lg bg-[--color-cta] px-4 py-2 font-semibold text-white hover:bg-[--color-cta-hover]">

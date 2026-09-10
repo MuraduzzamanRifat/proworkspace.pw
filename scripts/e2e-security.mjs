@@ -69,7 +69,10 @@ async function login(page, email, password) {
   await page.goto(`${BASE}/admin/login`, { waitUntil: 'networkidle2' })
   await page.type('#email', email)
   await page.type('#password', password)
-  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2' }), page.click('button[type=submit]')])
+  await Promise.all([page.waitForNavigation({ waitUntil: 'load', timeout: 20000 }).catch(() => {}), page.click('button[type=submit]')])
+  await page.waitForFunction(() => !location.pathname.endsWith('/admin/login') || document.body.innerText.includes('সঠিক নয়') || document.body.innerText.includes('অনেকবার চেষ্টা'), { timeout: 60000 }).catch(() => {})
+  const loginText = await page.evaluate(() => document.body.innerText)
+  if (loginText.includes('অনেকবার চেষ্টা')) fail('login rate limiter is active for this address (10 attempts / 15 min) — clear it with scripts/reset-rate-limit.ts admin-login:')
 }
 async function logout(page) {
   const btn = await page.$$("xpath///button[contains(., 'লগআউট')]")
@@ -158,10 +161,12 @@ async function main() {
     await page.goto(`${BASE}/admin/users`, { waitUntil: 'networkidle2' })
     await page.type('input[name=email]', SUPPORT_EMAIL)
     await page.type('input[name=name]', 'E2E Support')
-    await page.select('form select[name=role]', 'support')
+    await page.select("form:has(input[name=email]) select[name=role]", 'support')
     await page.type('input[name=password]', SUPPORT_PASSWORD)
-    await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2' }), page.click('form button[type=submit]')])
-    assert((await bodyText(page)).includes('তৈরি হয়েছে'), `created support user ${SUPPORT_EMAIL}`, 'support user was not created')
+    const createBtn = await page.$$("xpath///form[.//input[@name='email']]//button[@type='submit']")
+    await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2' }), createBtn[0].click()])
+    await page.waitForFunction(() => location.search.includes('msg=') || location.search.includes('error='), { timeout: 15000 })
+    assert(decodeURIComponent(page.url()).includes('তৈরি হয়েছে'), `created support user ${SUPPORT_EMAIL}`, `support user was not created: ${decodeURIComponent(page.url()).slice(-120)}`)
     await logout(page)
 
     // --- 4. As support: what is hidden, what is refused ----------------------
@@ -170,7 +175,9 @@ async function main() {
     assert(!navText.includes('ল্যান্ডিং পেজ') && !navText.includes('ব্যবহারকারী') && !navText.includes('অফার'), 'support nav hides landing page, offers and users', `support nav shows too much: ${navText.replace(/\n/g, ' | ')}`)
 
     await page.goto(`${BASE}/admin/users`, { waitUntil: 'networkidle2' })
-    assert(!page.url().includes('/admin/users') && (await bodyText(page)).includes('অনুমতি'), 'support: /admin/users redirected away with a permission message', `support reached ${page.url()}`)
+    assert(!page.url().includes('/admin/users') && decodeURIComponent(page.url()).includes('অনুমতি'), 'support: /admin/users redirected away with a permission message in the URL', `support reached ${page.url()}`)
+    await page.waitForFunction(() => document.body.innerText.includes('অনুমতি'), { timeout: 10000 }).catch(() => {})
+    assert((await bodyText(page)).includes('অনুমতি'), 'support: the permission message is VISIBLE on the dashboard', 'the dashboard did not display the permission message')
 
     await page.goto(`${BASE}/admin/landing`, { waitUntil: 'networkidle2' })
     const landingText = await bodyText(page)
@@ -251,7 +258,8 @@ async function main() {
     const rowBtn = await page.$$(`xpath///tr[contains(., '${SUPPORT_EMAIL}')]//button[contains(., 'বন্ধ করুন')]`)
     assert(rowBtn.length === 1, 'found the support user row', 'support user row not found for cleanup')
     await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2' }), rowBtn[0].click()])
-    assert((await bodyText(page)).includes('বন্ধ করা হয়েছে'), 'support user deactivated (sessions ended)', 'could not deactivate the support user')
+    await page.waitForFunction(() => location.search.includes('msg=') || location.search.includes('error='), { timeout: 15000 })
+    assert(decodeURIComponent(page.url()).includes('বন্ধ করা হয়েছে'), 'support user deactivated (sessions ended)', `could not deactivate the support user: ${decodeURIComponent(page.url()).slice(-120)}`)
 
     console.log(`\nALL ${step} SECURITY STEPS PASSED.`)
   } catch (err) {
