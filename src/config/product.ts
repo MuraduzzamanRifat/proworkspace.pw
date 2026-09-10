@@ -27,7 +27,7 @@
  * dist/bundle-master/ebook.pdf; landing-copy.md carries stale numbers.
  */
 
-import { taka, type Poisha } from '@/domain/money'
+import { taka, toBengaliDigits, type Poisha } from '@/domain/money'
 
 /** The book inside the bundle. Facts only; every number is verified. */
 export const BOOK = {
@@ -68,7 +68,9 @@ export const DELIVERABLES: readonly DeliverableSeed[] = [
   {
     key: 'ebook',
     label: `${BOOK.title} — সম্পূর্ণ বই (PDF)`,
-    detail: `${BOOK.pageCount} পৃষ্ঠা · ${BOOK.chapterCount} অধ্যায় · ${BOOK.promptCount}টি প্রস্তুত প্রম্পট · ওয়ার্কফ্লো ফাইলসহ`,
+    detail:
+      `${toBengaliDigits(String(BOOK.pageCount))} পৃষ্ঠা · ${toBengaliDigits(String(BOOK.chapterCount))} অধ্যায় · ` +
+      `${toBengaliDigits(String(BOOK.promptCount))}টি প্রস্তুত প্রম্পট · ওয়ার্কফ্লো ফাইলসহ`,
     separateValue: taka(1990),
     filename: 'ai-agent-diye-income.pdf',
   },
