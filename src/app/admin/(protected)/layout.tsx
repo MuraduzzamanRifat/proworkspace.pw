@@ -42,6 +42,9 @@ export default async function ProtectedAdminLayout({
             <Link href="/admin/orders" className="text-[--color-muted] hover:text-[--color-ink]">
               অর্ডার
             </Link>
+            <Link href="/admin/account" className="text-[--color-muted] hover:text-[--color-ink]">
+              অ্যাকাউন্ট
+            </Link>
             <Link href="/" className="text-[--color-muted] hover:text-[--color-ink]">
               সাইট দেখুন
             </Link>
