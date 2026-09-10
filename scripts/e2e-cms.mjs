@@ -96,6 +96,20 @@ async function launchEdge(exe) {
   return puppeteer.connect({ browserURL: url, defaultViewport: null })
 }
 
+/** Restore the most recent previous version into the draft and publish it. */
+async function restorePreviousAndPublish(page) {
+  await page.goto(`${BASE}/admin/landing/versions`, { waitUntil: 'networkidle2' })
+  const restoreButtons = await page.$$("xpath///button[contains(., 'এই সংস্করণ ফেরান')]")
+  if (restoreButtons.length === 0) throw new Error('no restorable previous version')
+  await restoreButtons[0].click()
+  await page.waitForFunction(() => location.pathname === '/admin/landing', { timeout: 15000 })
+  await page.goto(`${BASE}/admin/landing`, { waitUntil: 'networkidle2' })
+  const publishBtn = await page.$$("xpath///button[contains(., 'পরিবর্তন প্রকাশ করুন')]")
+  if (publishBtn.length === 0) throw new Error('publish button missing after restore')
+  await publishBtn[0].click()
+  await page.waitForFunction(() => document.body.innerText.includes('প্রকাশ সফল হয়েছে'), { timeout: 20000 })
+}
+
 async function clearAndType(page, selector, text) {
   await page.click(selector)
   await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control')
@@ -120,20 +134,27 @@ async function main() {
     page.on('pageerror', (e) => console.log('   pageerror:', String(e).slice(0, 160)))
     page.on('response', (r) => { if (r.status() >= 400) console.log('   http', r.status(), r.url().slice(0, 120)) })
 
-    // 1-2 record production ------------------------------------------------
-    const before = await fetchHtml('/')
-    assert(before.status === 200, 'production landing page responds 200', `production responded ${before.status}`)
-    const h1Before = before.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1].replace(/<[^>]+>/g, '').trim() ?? ''
-    assert(h1Before.length > 0, `recorded live headline: "${h1Before.slice(0, 60)}"`, 'no <h1> on production')
-    const hadNewImageBefore = before.html.includes(NEW_IMAGE)
-    assert(!hadNewImageBefore, 'test image is not on production yet', 'test image already present; cannot prove a change')
-
-    // 3 login --------------------------------------------------------------
+    // 3 login first, so an interrupted earlier run can be cleaned up --------
     await page.goto(`${BASE}/admin/login`, { waitUntil: 'networkidle2' })
     await page.type('#email', EMAIL)
     await page.type('#password', PASSWORD)
     await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2' }), page.click('button[type=submit]')])
     assert(page.url().endsWith('/admin') || page.url().includes('/admin?'), 'logged in and landed on the dashboard', `login did not reach the dashboard: ${page.url()}`)
+
+    // 1-2 record production ------------------------------------------------
+    let before = await fetchHtml('/')
+    if (before.html.includes(NEW_IMAGE)) {
+      console.log('NOTE     production still carries test content from an interrupted run; restoring the previous version first')
+      await restorePreviousAndPublish(page)
+      for (let i = 0; i < 20 && before.html.includes(NEW_IMAGE); i += 1) {
+        await new Promise((r) => setTimeout(r, 3000))
+        before = await fetchHtml('/')
+      }
+    }
+    assert(before.status === 200, 'production landing page responds 200', `production responded ${before.status}`)
+    const h1Before = before.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1].replace(/<[^>]+>/g, '').trim() ?? ''
+    assert(h1Before.length > 0, `recorded live headline: "${h1Before.slice(0, 60)}"`, 'no <h1> on production')
+    assert(!before.html.includes(NEW_IMAGE), 'test image is not on production yet', 'test image still present after cleanup; cannot prove a change')
 
     // 4-5 edit the hero ----------------------------------------------------
     await page.goto(`${BASE}/admin/landing/hero`, { waitUntil: 'networkidle2' })
@@ -196,6 +217,20 @@ async function main() {
     const mobile = await browser.newPage()
     await mobile.setViewport({ width: 375, height: 740, isMobile: true, deviceScaleFactor: 2 })
     await mobile.goto(`${BASE}/`, { waitUntil: 'networkidle2' })
+    // A CDN is not atomic across edge nodes: a second client may briefly get
+    // the previous copy. The requirement is that new visitors get the new
+    // content promptly, so poll with reloads and report how long it took.
+    let freshAfter = -1
+    for (let i = 0; i < 15; i += 1) {
+      const txt = await mobile.evaluate(() => document.body.innerText)
+      if (txt.includes(NEW_HEADLINE)) {
+        freshAfter = i * 3
+        break
+      }
+      await new Promise((r) => setTimeout(r, 3000))
+      await mobile.reload({ waitUntil: 'networkidle2' })
+    }
+    assert(freshAfter >= 0, `mobile: fresh page served on a second client (after ${freshAfter} s)`, 'mobile: still the previous page after 45 s')
     const fit = await mobile.evaluate((u) => {
       const img = Array.from(document.images).find((i) => i.src === u)
       if (!img) return { found: false }
