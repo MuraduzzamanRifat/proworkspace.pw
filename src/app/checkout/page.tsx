@@ -5,6 +5,7 @@ import { CheckoutForm } from '@/components/CheckoutForm'
 import { PAYMENT_METHODS_ADVERTISED } from '@/config/site'
 import { formatBdt } from '@/domain/money'
 import { getCatalogue } from '@/services/catalogue'
+import { getFlags } from '@/services/flags'
 
 /** A checkout page must never be indexed, and must never be cached. */
 export const metadata: Metadata = {
@@ -21,7 +22,7 @@ export default async function CheckoutPage({
 }) {
   const params = await searchParams
   const cancelled = params['cancelled'] === '1'
-  const { product, primary } = await getCatalogue()
+  const [{ product, primary }, flags] = await Promise.all([getCatalogue(), getFlags()])
   const priceLabel = formatBdt(primary.price)
 
   // Read process.env directly rather than through serverEnv(): that throws in
@@ -90,6 +91,7 @@ export default async function CheckoutPage({
               offerCode={primary.code}
               priceLabel={priceLabel}
               paymentMethods={PAYMENT_METHODS_ADVERTISED}
+              showCoupon={flags.couponsEnabled}
             />
           ) : (
             // Deployed before the database and gateway credentials exist.

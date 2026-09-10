@@ -153,6 +153,21 @@ async function loadCoupon(db: Database, code: string | null): Promise<PricingCou
 }
 
 // ---------------------------------------------------------------------------
+// Price preview (no writes) — used to show a coupon's effect before paying
+// ---------------------------------------------------------------------------
+
+export async function previewPrice(
+  offerCode: string,
+  couponCode: string | null,
+  dbParam?: Database,
+): Promise<PriceBreakdown> {
+  const db = dbParam ?? getDb()
+  const { pricing } = await loadOffer(db, offerCode)
+  const coupon = await loadCoupon(db, couponCode)
+  return calculatePrice({ offer: pricing, coupon, attemptedCouponCode: couponCode, now: new Date() })
+}
+
+// ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 

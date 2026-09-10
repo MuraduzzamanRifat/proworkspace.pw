@@ -19,6 +19,15 @@ interface Props {
   offerCode: string
   priceLabel: string
   paymentMethods: readonly string[]
+  /** Settings → "চেকআউটে কুপন কোডের ঘর". */
+  showCoupon?: boolean
+}
+
+interface CouponState {
+  code: string
+  applied: { code: string; discount: string; total: string } | null
+  error: string | null
+  checking: boolean
 }
 
 interface FieldErrors {
@@ -27,9 +36,29 @@ interface FieldErrors {
   form?: string
 }
 
-export function CheckoutForm({ offerCode, priceLabel, paymentMethods }: Props) {
+export function CheckoutForm({ offerCode, priceLabel, paymentMethods, showCoupon = false }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
+  const [coupon, setCoupon] = useState<CouponState>({ code: '', applied: null, error: null, checking: false })
+
+  /**
+   * Preview only. The server recomputes the price from database rows when
+   * the order is created; this call exists so a wrong code is shown BEFORE
+   * the customer is sent to pay full price.
+   */
+  async function applyCoupon() {
+    const code = coupon.code.trim().toUpperCase()
+    if (!code) return
+    setCoupon((c) => ({ ...c, checking: true, error: null, applied: null }))
+    try {
+      const r = await fetch(`/api/coupon?code=${encodeURIComponent(code)}&offer=${encodeURIComponent(offerCode)}`)
+      const j = (await r.json()) as { ok: boolean; error?: string; code?: string; discount?: string; total?: string }
+      if (j.ok && j.code) setCoupon({ code, applied: { code: j.code, discount: j.discount ?? '', total: j.total ?? '' }, error: null, checking: false })
+      else setCoupon((c) => ({ ...c, applied: null, error: j.error ?? 'কোডটি প্রযোজ্য নয়।', checking: false }))
+    } catch {
+      setCoupon((c) => ({ ...c, applied: null, error: 'কোড যাচাই করা যায়নি।', checking: false }))
+    }
+  }
   const idempotencyKey = useRef<string>('')
 
   if (idempotencyKey.current === '') {
@@ -71,6 +100,7 @@ export function CheckoutForm({ offerCode, priceLabel, paymentMethods }: Props) {
           email,
           phone,
           idempotencyKey: idempotencyKey.current,
+          couponCode: showCoupon && coupon.applied ? coupon.applied.code : null,
           attribution: collectAttribution(),
         }),
       })
@@ -125,6 +155,42 @@ export function CheckoutForm({ offerCode, priceLabel, paymentMethods }: Props) {
         hint="ঐচ্ছিক — সহায়তার প্রয়োজনে।"
       />
 
+      {showCoupon && (
+        <div>
+          <label htmlFor="coupon" className="mb-2 block text-sm font-semibold text-[--color-ink]">
+            কুপন কোড
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="coupon"
+              name="coupon"
+              value={coupon.code}
+              autoComplete="off"
+              onChange={(e) => setCoupon({ code: e.target.value, applied: null, error: null, checking: false })}
+              className="w-full rounded-xl border border-[--color-line] bg-[--color-surface] px-4 py-3 uppercase text-[--color-ink]"
+            />
+            <button
+              type="button"
+              onClick={applyCoupon}
+              disabled={coupon.checking || coupon.code.trim() === ''}
+              className="shrink-0 rounded-xl border border-[--color-line-strong] px-4 py-3 text-sm font-semibold hover:border-[--color-accent] disabled:opacity-50"
+            >
+              {coupon.checking ? 'যাচাই…' : 'প্রয়োগ'}
+            </button>
+          </div>
+          {coupon.applied && (
+            <p role="status" className="mt-1.5 text-sm text-[--color-success]">
+              {coupon.applied.code} প্রযোজ্য — ছাড় {coupon.applied.discount}, মোট {coupon.applied.total}
+            </p>
+          )}
+          {coupon.error && (
+            <p role="alert" className="mt-1.5 text-sm text-[--color-danger]">
+              {coupon.error}
+            </p>
+          )}
+        </div>
+      )}
+
       {errors.form && (
         <p role="alert" className="rounded-lg border border-[--color-danger] px-4 py-3 text-sm text-[--color-danger]">
           {errors.form}
@@ -136,7 +202,7 @@ export function CheckoutForm({ offerCode, priceLabel, paymentMethods }: Props) {
         disabled={submitting}
         className="w-full rounded-xl bg-[--color-cta] px-6 py-4 text-lg font-semibold text-white transition-colors hover:bg-[--color-cta-hover] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {submitting ? 'অপেক্ষা করুন…' : `${priceLabel} — পেমেন্ট করুন`}
+        {submitting ? 'অপেক্ষা করুন…' : `${showCoupon && coupon.applied ? coupon.applied.total : priceLabel} — পেমেন্ট করুন`}
       </button>
 
       {paymentMethods.length > 0 && (

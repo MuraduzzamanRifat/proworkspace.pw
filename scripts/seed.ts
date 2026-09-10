@@ -3,6 +3,7 @@ import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/neon-serverless'
 import ws from 'ws'
 
+import { DEFAULT_PAGE } from '../src/cms/registry'
 import { BOOK, OFFERS, PRODUCT } from '../src/config/product'
 import * as schema from '../src/db/schema'
 import { hashPassword, validatePasswordStrength } from '../src/lib/password'
@@ -123,6 +124,57 @@ async function main(): Promise<void> {
       .onConflictDoNothing({ target: schema.settings.key })
   }
   console.log(`settings ${settingsRows.length}`)
+
+  // --- Landing-page sections ----------------------------------------------
+  // Draft and published start identical to the built-in defaults, so the
+  // first render from the database is byte-for-byte the hard-coded page.
+  // onConflictDoNothing on key: re-running never overwrites an admin's edits.
+  const now = new Date()
+  let inserted = 0
+  for (const s of DEFAULT_PAGE) {
+    const content = s.content()
+    const rows = await db
+      .insert(schema.contentSections)
+      .values({
+        key: s.key,
+        type: s.type,
+        label: s.label,
+        draftData: content,
+        publishedData: content,
+        draftEnabled: s.enabled,
+        isEnabled: s.enabled,
+        draftSortOrder: s.sortOrder,
+        sortOrder: s.sortOrder,
+        publishedAt: now,
+      })
+      .onConflictDoNothing({ target: schema.contentSections.key })
+      .returning({ key: schema.contentSections.key })
+    inserted += rows.length
+  }
+  console.log(`sections ${DEFAULT_PAGE.length} (${inserted} new)`)
+
+  const versions = await db.select({ n: schema.pageVersions.version }).from(schema.pageVersions).limit(1)
+  if (versions.length === 0) {
+    const all = await db.select().from(schema.contentSections)
+    await db.insert(schema.pageVersions).values({
+      version: 1,
+      snapshot: {
+        sections: all.map((r) => ({
+          key: r.key,
+          type: r.type,
+          label: r.label,
+          enabled: r.isEnabled,
+          sortOrder: r.sortOrder,
+          content: r.publishedData ?? {},
+        })),
+      },
+      changedKeys: all.map((r) => r.key),
+      publishedByEmail: 'scripts/seed',
+    })
+    console.log('version  1 (initial snapshot)')
+  } else {
+    console.log('version  history exists, left untouched')
+  }
 
   // --- Bootstrap admin -----------------------------------------------------
   const email = (process.env.ADMIN_BOOTSTRAP_EMAIL ?? '').trim().toLowerCase()

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { missingPolicies } from '@/config/site'
 import { formatBdt, poisha } from '@/domain/money'
 import { STATE_LABELS_BN } from '@/domain/order-state'
-import { emailConfigured, missingProductFiles, paymentsConfigured, serverEnv } from '@/config/env'
+import { clientEnv, emailConfigured, missingProductFiles, paymentsConfigured, serverEnv } from '@/config/env'
 import { PRODUCT } from '@/config/product'
 import { getDashboardMetrics, getHealthAlerts, getRecentOrders } from '@/services/metrics'
 
@@ -46,6 +46,21 @@ export default async function AdminDashboard({
           ))}
         </nav>
       </div>
+
+      <nav aria-label="শর্টকাট" className="flex flex-wrap gap-2 text-sm">
+        <Link href="/admin/landing" className="rounded-lg bg-[--color-cta] px-4 py-2 font-semibold text-white hover:bg-[--color-cta-hover]">
+          ল্যান্ডিং পেজ সম্পাদনা
+        </Link>
+        <a href={clientEnv.NEXT_PUBLIC_SITE_URL} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-[--color-line] px-4 py-2 hover:border-[--color-line-strong]">
+          লাইভ পেজ দেখুন ↗
+        </a>
+        <Link href="/admin/offers" className="rounded-lg border border-[--color-line] px-4 py-2 hover:border-[--color-line-strong]">
+          অফার ও দাম
+        </Link>
+        <Link href="/admin/orders" className="rounded-lg border border-[--color-line] px-4 py-2 hover:border-[--color-line-strong]">
+          অর্ডার
+        </Link>
+      </nav>
 
       {blockers.length > 0 && (
         <section

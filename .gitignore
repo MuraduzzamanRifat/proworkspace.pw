@@ -41,3 +41,6 @@ public/downloads/
 coverage/
 .idea/
 .vscode/
+
+# E2E browser artefacts (screenshots, Edge profiles)
+.e2e-shots/

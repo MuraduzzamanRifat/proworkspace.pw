@@ -3,6 +3,7 @@ import { Anek_Bangla, Hind_Siliguri } from 'next/font/google'
 
 import { Analytics as VercelAnalytics } from '@vercel/analytics/next'
 
+import { loadPublishedPage } from '@/cms/load'
 import { Analytics } from '@/components/Analytics'
 import { clientEnv } from '@/config/env'
 import { BOOK, PRODUCT } from '@/config/product'
@@ -39,7 +40,43 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export const metadata: Metadata = {
+/**
+ * Site metadata comes from the published SEO section when one exists, so the
+ * admin can change the title, description, social image and index flag
+ * without a deploy. Falls back to the static defaults below on any failure.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const page = await loadPublishedPage()
+    const seo = page.seo
+    if (!seo) return staticMetadata
+    const title = seo.title || staticMetadata.title
+    const description = seo.description || (staticMetadata.description as string)
+    return {
+      ...staticMetadata,
+      title: typeof title === 'string' ? { default: title, template: `%s | ${PRODUCT.brand}` } : title,
+      description,
+      alternates: { canonical: seo.canonical || '/' },
+      openGraph: {
+        ...staticMetadata.openGraph,
+        title: seo.ogTitle || (typeof title === 'string' ? title : `${PRODUCT.title}`),
+        description: seo.ogDescription || description,
+        ...(seo.ogImage ? { images: [{ url: seo.ogImage }] } : {}),
+      },
+      twitter: {
+        ...staticMetadata.twitter,
+        ...(seo.twitterImage || seo.ogImage ? { images: [seo.twitterImage || seo.ogImage] } : {}),
+      },
+      robots: seo.index
+        ? staticMetadata.robots
+        : { index: false, follow: false, googleBot: { index: false, follow: false } },
+    }
+  } catch {
+    return staticMetadata
+  }
+}
+
+const staticMetadata: Metadata = {
   metadataBase: new URL(clientEnv.NEXT_PUBLIC_SITE_URL),
   title: {
     default: `${PRODUCT.title} — ${PRODUCT.subtitle}`,

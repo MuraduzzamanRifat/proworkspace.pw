@@ -21,6 +21,7 @@ import {
   sendDeliveryEmail,
   sendPaymentMismatchAlert,
 } from '@/services/email'
+import { getPublicSettings } from '@/services/flags'
 
 /**
  * Settlement and fulfilment.
@@ -160,6 +161,8 @@ export async function settlePayment(
   // --- Claim the settlement ------------------------------------------------
   const grantPublicId = randomId(18)
   const now = new Date()
+  // Settings → "প্রতি অর্ডারে সর্বোচ্চ ডাউনলোড". Read at grant time; null = unlimited.
+  const { downloadMaxPerOrder } = await getPublicSettings()
 
   const claimed = await db.transaction(async (tx) => {
     const updated = await tx
@@ -201,7 +204,7 @@ export async function settlePayment(
       orderId: row.orderId,
       publicId: grantPublicId,
       email: row.email,
-      maxDownloads: null,
+      maxDownloads: downloadMaxPerOrder,
       expiresAt: new Date(now.getTime() + DOWNLOAD_TTL_DAYS * 86_400_000),
     })
 

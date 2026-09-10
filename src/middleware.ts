@@ -27,10 +27,15 @@ const CSP = [
   // on a Vercel deployment the script is same-origin and covered by 'self'.
   "script-src 'self' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com https://va.vercel-scripts.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com",
+  // Any https image: the CMS accepts pasted image URLs from any host, and the
+  // content schema already refuses everything that is not https.
+  "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://www.facebook.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com",
-  "frame-src 'none'",
+  // Only the privacy-enhanced YouTube host, for the click-to-load video
+  // facade. The iframe is never in the initial HTML.
+  "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
+  "media-src 'self' https:",
   "frame-ancestors 'none'",
   "form-action 'self'",
   "base-uri 'self'",

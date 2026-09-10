@@ -420,23 +420,101 @@ export const downloadEvents = pgTable(
 // Content management: draft -> preview -> publish, with rollback
 // ---------------------------------------------------------------------------
 
+/**
+ * One row per landing-page section instance.
+ *
+ * `key` identifies the instance ("hero", "bonus-workflows"); `type` selects
+ * the schema and renderer from src/cms/registry.ts. Every editable property
+ * exists twice — draft and published — including enabled and order, because
+ * "disable the FAQ" and "move Trust above Reviews" are edits that must not
+ * reach customers until Publish. Content is structured JSON validated by the
+ * section type's zod schema on every write and every read; the CMS never
+ * stores HTML.
+ */
 export const contentSections = pgTable(
   'content_sections',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     key: text('key').notNull(),
+    type: text('type').notNull().default(''),
     label: text('label').notNull().default(''),
     /** Currently live content. Null until first publish. */
     publishedData: jsonb('published_data').$type<Record<string, unknown>>(),
     /** Work in progress. Rendered only on the preview route. */
     draftData: jsonb('draft_data').$type<Record<string, unknown>>(),
+    /** Published state. */
     isEnabled: boolean('is_enabled').notNull().default(true),
     sortOrder: integer('sort_order').notNull().default(0),
+    /** Draft state. */
+    draftEnabled: boolean('draft_enabled').notNull().default(true),
+    draftSortOrder: integer('draft_sort_order').notNull().default(0),
+    /** Soft delete. A deleted section is hidden from the builder, kept for versions. */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     publishedAt: timestamp('published_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
     keyUnique: uniqueIndex('content_sections_key_unique').on(t.key),
+  }),
+)
+
+/**
+ * Whole-page snapshots, one per publish.
+ *
+ * Restoring a version copies its snapshot into the DRAFT of every section and
+ * leaves history untouched; publishing that draft appends a new version with
+ * `restoredFrom` set. Nothing is ever deleted from this table.
+ */
+export const pageVersions = pgTable(
+  'page_versions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    version: integer('version').notNull(),
+    /** Every section's published key/type/enabled/order/content at publish time. */
+    snapshot: jsonb('snapshot').$type<Record<string, unknown>>().notNull(),
+    /** Section keys whose content, enabled flag or order changed in this publish. */
+    changedKeys: jsonb('changed_keys').$type<string[]>().notNull().default([]),
+    restoredFrom: integer('restored_from'),
+    publishedBy: uuid('published_by').references(() => adminUsers.id, { onDelete: 'set null' }),
+    publishedByEmail: text('published_by_email').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    versionUnique: uniqueIndex('page_versions_version_unique').on(t.version),
+  }),
+)
+
+export const mediaSourceEnum = pgEnum('media_source', ['url', 'upload'])
+
+/**
+ * Media library.
+ *
+ * A row is either a registered external https URL (probed once for type and
+ * dimensions so the admin never saves a broken image without knowing) or an
+ * upload the app optimised and stored. Soft-deleted rows stay for audit.
+ */
+export const media = pgTable(
+  'media',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    url: text('url').notNull(),
+    source: mediaSourceEnum('source').notNull().default('url'),
+    filename: text('filename').notNull().default(''),
+    alt: text('alt').notNull().default(''),
+    mime: text('mime').notNull().default(''),
+    width: integer('width'),
+    height: integer('height'),
+    bytes: integer('bytes'),
+    /** For uploads: derived variant URLs keyed by width, e.g. {"640":"…","1280":"…"}. */
+    variants: jsonb('variants').$type<Record<string, string>>().notNull().default({}),
+    createdBy: uuid('created_by').references(() => adminUsers.id, { onDelete: 'set null' }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    urlUnique: uniqueIndex('media_url_unique').on(t.url),
+    createdIdx: index('media_created_idx').on(t.createdAt),
   }),
 )
 
