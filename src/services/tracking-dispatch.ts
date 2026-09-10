@@ -38,6 +38,8 @@ interface ClaimedEvent {
   event_name: string
   payload: Record<string, unknown>
   attempts: number
+  /** When the conversion happened. Meta attributes on this, not on send time. */
+  created_at: string | Date
 }
 
 export async function dispatchPendingTrackingEvents(
@@ -67,7 +69,7 @@ export async function dispatchPendingTrackingEvents(
       LIMIT ${limit}
       FOR UPDATE SKIP LOCKED
     )
-    RETURNING id, event_id, event_name, payload, attempts
+    RETURNING id, event_id, event_name, payload, attempts, created_at
   `)
 
   const claimed = claimResult.rows as unknown as ClaimedEvent[]
@@ -140,11 +142,18 @@ async function sendToMeta(
   const userData: Record<string, string[]> = {}
   if (email) userData['em'] = [sha256Hex(email.trim().toLowerCase())]
 
+  // The purchase time, not the dispatch time. This queue is drained on a
+  // schedule that can lag the sale by up to a day, and Meta's attribution
+  // window is measured from event_time: stamping "now" would credit every
+  // conversion to the wrong day and, past the click window, to no ad at all.
+  const occurredAt = new Date(event.created_at).getTime()
+  const eventTime = Math.floor((Number.isFinite(occurredAt) ? occurredAt : Date.now()) / 1000)
+
   const body: Record<string, unknown> = {
     data: [
       {
         event_name: event.event_name,
-        event_time: Math.floor(Date.now() / 1000),
+        event_time: eventTime,
         event_id: event.event_id,
         action_source: 'website',
         event_source_url: `${clientEnv.NEXT_PUBLIC_SITE_URL}/thank-you`,

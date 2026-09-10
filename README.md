@@ -273,8 +273,21 @@ Recommended before spending on ads:
 
 ## Scheduled jobs
 
-`vercel.json` registers one cron: `/api/cron/dispatch-tracking` every 10
-minutes. It drains the `tracking_events` queue to the Meta Conversions API.
+`vercel.json` registers one cron: `/api/cron/dispatch-tracking`, daily at
+03:00 UTC (09:00 Dhaka). It drains the `tracking_events` queue to the Meta
+Conversions API.
+
+**Why daily.** Vercel's Hobby plan refuses to deploy any cron that runs more
+than once per day, so a `*/10` schedule would fail the deployment outright.
+Daily is safe for attribution because each event is sent with the purchase
+time, not the send time, and Meta deduplicates against the browser pixel for
+48 hours after the first event. On a Pro plan, change the schedule to
+`*/10 * * * *` for near-real-time reporting; nothing else needs to change.
+
+`vercel.json` also pins serverless functions to `sin1` (Singapore) to sit next
+to the Neon database, which should be created in `ap-southeast-1`. If the
+database ends up elsewhere, move this to match; a cross-region round trip on
+every checkout query is the single easiest way to add 200 ms to TTFB.
 
 It is a no-op returning `skipped: "not_configured"` until both
 `NEXT_PUBLIC_META_PIXEL_ID` and `META_CAPI_ACCESS_TOKEN` are set. Rows keep
