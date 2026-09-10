@@ -255,14 +255,25 @@ Blocking. The admin dashboard shows these as launch blockers automatically.
       `src/config/site.ts`.
 - [ ] Write privacy policy, terms, and contact pages (same file).
 - [ ] Upload the PDF bundle to private storage and set `EBOOK_FILE_URL`.
-- [ ] Set the live `UDDOKTAPAY_API_KEY` and `UDDOKTAPAY_BASE_URL`.
-- [ ] Set `CRON_SECRET`, and confirm `/api/cron/dispatch-tracking` returns 401
-      without it and 200 with it.
-- [ ] Set `RESEND_API_KEY` and verify the sending domain (SPF/DKIM).
-- [ ] Set `ADMIN_ALERT_EMAIL`.
+      **Until this exists, a paid customer's download returns 503.**
+- [x] Live `UDDOKTAPAY_API_KEY` and `UDDOKTAPAY_BASE_URL` set (2026-09-10).
+      Verified: a production checkout created order `CRS-UFVFWDFX` and the
+      panel at `workspace.paymently.io` returned a hosted payment page.
+- [x] `CRON_SECRET` set; endpoint answers 401 without it (2026-09-10).
+- [ ] Set `RESEND_API_KEY` **and change `MAIL_FROM`**. It is currently a
+      gmail.com address, which Resend cannot verify and will reject. Use a
+      sender on a domain you control (e.g. `noreply@proworkspace.online`) and
+      add Resend's DKIM/SPF records to that domain's DNS.
+- [x] `ADMIN_ALERT_EMAIL` set (2026-09-10).
 - [ ] Place one real end-to-end order and confirm: money arrives, the email
       lands, the download works, and the order shows `fulfilled` in the admin.
-- [ ] Confirm `/admin` is unreachable when signed out.
+      Two unpaid test orders already exist from integration probes
+      (`CRS-UFVFWDFX`, `CRS-A44PPTKZ`); they will sit as `payment_pending`.
+- [x] `/admin` redirects to login when signed out (verified on production).
+- [ ] Confirm which payment methods the Paymently panel has enabled. The
+      checkout microcopy currently names only bKash, because that is all the
+      live test invoice page showed. Add Nagad/card to
+      `PAYMENT_METHODS_ADVERTISED` only once confirmed.
 - [ ] Test a restore from a Neon branch.
 
 Recommended before spending on ads:
