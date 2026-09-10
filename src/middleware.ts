@@ -23,7 +23,9 @@ import { NextResponse, type NextRequest } from 'next/server'
  */
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com",
+  // va.vercel-scripts.com is only the debug build used outside production;
+  // on a Vercel deployment the script is same-origin and covered by 'self'.
+  "script-src 'self' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com https://va.vercel-scripts.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com",
   "font-src 'self' data:",

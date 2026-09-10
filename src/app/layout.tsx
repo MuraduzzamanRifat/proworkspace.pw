@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import { Anek_Bangla, Hind_Siliguri } from 'next/font/google'
 
+import { Analytics as VercelAnalytics } from '@vercel/analytics/next'
+
 import { Analytics } from '@/components/Analytics'
 import { clientEnv } from '@/config/env'
 import { PRODUCT } from '@/config/product'
@@ -79,6 +81,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         {children}
         <Analytics />
+        {/*
+          Vercel Web Analytics. First-party (/_vercel/insights/*), no cookies,
+          ~1 KB, loaded after hydration. Its value here is that it is served
+          from our own origin, so it survives the ad blockers that silence the
+          Meta pixel and GA4 for a large share of Bangladeshi traffic. It is the
+          page-view baseline the "checkouts started, nothing paid" alarm needs.
+          Requires Web Analytics to be enabled on the Vercel project; without
+          that it fails silently. Does nothing outside Vercel.
+        */}
+        <VercelAnalytics />
       </body>
     </html>
   )
