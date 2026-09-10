@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { isConfigError } from '@/config/env'
 import { formatBdt, poisha } from '@/domain/money'
 import { withConfigGuard } from '@/lib/http'
 import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
@@ -87,6 +88,10 @@ async function handle(request: Request): Promise<Response> {
       log.warn('checkout.rejected', { code: err.code, ip })
       return NextResponse.json({ ok: false, error: err.userMessageBn }, { status })
     }
+
+    // Not ours to swallow: the guard around this handler turns a missing
+    // configuration into a 503 that says which variable is absent.
+    if (isConfigError(err)) throw err
 
     log.error('checkout.unhandled', { err, ip })
     return NextResponse.json(

@@ -88,8 +88,12 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
 ## Environment variables
 
-Required in production. The app **refuses to start** without them and names
-which are missing, without printing any value.
+Required in production. Without them, every API route and admin page answers
+**503 `Service not configured`** with the names of the missing variables in the
+body and in a structured log line — never their values. The landing page keeps
+working from the seeded catalogue, and the checkout page shows a "payments not
+yet enabled" notice instead of a form. Nothing crashes, and nothing pretends
+to work.
 
 | Variable | Purpose |
 |---|---|
