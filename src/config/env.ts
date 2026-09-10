@@ -14,6 +14,23 @@ import { z } from 'zod'
 
 const isProd = process.env.NODE_ENV === 'production'
 
+/**
+ * Gateway panel base URL, normalised.
+ *
+ * The client appends `/api/checkout-v2` and `/api/verify-payment` itself.
+ * People naturally paste the panel URL exactly as their dashboard shows it,
+ * which is sometimes `https://panel.example/api`, and the result would be
+ * `/api/api/checkout-v2`. Accept either form: trailing slashes and a trailing
+ * `/api` segment are removed.
+ */
+export function normaliseGatewayBase(input: string): string {
+  return input
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/api$/i, '')
+    .replace(/\/+$/, '')
+}
+
 /** Non-empty in production, optional in dev so `npm run dev` works unconfigured. */
 const requiredInProd = (name: string) =>
   z
@@ -55,7 +72,7 @@ const serverSchema = z.object({
     .string()
     .url()
     .default('https://sandbox.uddoktapay.com')
-    .transform((u) => u.replace(/\/+$/, '')),
+    .transform(normaliseGatewayBase),
   // Deliberately NOT required at boot. `paymentsConfigured()` gates every
   // money path: the checkout page hides its form, the checkout API answers
   // "gateway unavailable", and the webhook refuses, all without this key.
