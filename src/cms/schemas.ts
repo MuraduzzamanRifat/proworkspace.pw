@@ -30,9 +30,18 @@ export const shortText = z.string().trim().max(200)
 export const longText = z.string().trim().max(4000)
 export const lines = z.array(z.string().trim().max(400)).max(40)
 
+/**
+ * Optional intrinsic size. When present the renderer emits width/height so
+ * the browser reserves the box before the bytes arrive and nothing below
+ * the image jumps when it loads.
+ */
+const dimension = z.number().int().min(1).max(10000).optional()
+
 export const imageSchema = z.object({
   url: safeHttpsUrl.default(''),
   alt: shortText.default(''),
+  width: dimension,
+  height: dimension,
 })
 export type ImageValue = z.infer<typeof imageSchema>
 

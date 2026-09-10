@@ -38,7 +38,8 @@ export function RowActions(p: Props) {
     })
   }
 
-  const btn = 'rounded-lg border border-[--color-line] px-2.5 py-1 text-xs hover:border-[--color-line-strong] disabled:opacity-40'
+  // 44px minimum on touch screens; compact on desktop where a pointer is precise.
+  const btn = 'min-h-11 rounded-lg border border-[--color-line] px-3 py-2 text-xs transition-colors hover:border-[--color-line-strong] disabled:opacity-40 sm:min-h-0 sm:py-1'
 
   return (
     <div className="flex flex-col items-end gap-2">

@@ -5,6 +5,7 @@ import type { CtaAction, CtaValue, ImageValue, SectionContent } from '@/cms/sche
 import { BOOK, DELIVERABLES, PRODUCT } from '@/config/product'
 import { formatBdt, poisha, toBengaliDigits } from '@/domain/money'
 import type { CatalogueView } from '@/services/catalogue'
+import { Icon, isIconName } from './Icon'
 import { RichParagraphs, RichText } from './RichText'
 
 /**
@@ -59,7 +60,7 @@ export function LandingPage({ page, catalogue, preview = false, stickyCta = fals
               <span className="block text-xs text-[--color-muted]">{product.title}</span>
               <span className="text-lg font-bold">{priceLabel}</span>
             </span>
-            <Link href="/checkout" className="rounded-xl bg-[--color-cta] px-5 py-3 text-sm font-semibold text-white">
+            <Link href="/checkout" className="inline-flex min-h-11 items-center rounded-xl bg-[--color-cta] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[--color-cta-hover]">
               এখনই নিন
             </Link>
           </div>
@@ -161,11 +162,26 @@ function Cta({ cta, prefix = '', tone = 'primary' }: { cta: CtaValue; prefix?: s
   )
 }
 
-/** Renders nothing for an empty URL; never a broken image. */
+/**
+ * Renders nothing for an empty URL; never a broken image. Emits width/height
+ * when the CMS knows them so the box is reserved before load (no layout shift).
+ */
 function Img({ image, className, sizes }: { image: ImageValue; className?: string; sizes?: string }) {
   if (!image.url) return null
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={image.url} alt={image.alt} loading="lazy" decoding="async" className={className} sizes={sizes} />
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={image.url}
+      alt={image.alt}
+      width={image.width}
+      height={image.height}
+      loading="lazy"
+      decoding="async"
+      className={className}
+      sizes={sizes}
+      style={image.width && image.height ? { aspectRatio: `${image.width} / ${image.height}`, height: 'auto' } : undefined}
+    />
+  )
 }
 
 function youTubeId(url: string): string | null {
@@ -186,7 +202,10 @@ function Video({ url, title }: { url: string; title: string }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt={title} loading="lazy" decoding="async" className="aspect-video w-full object-cover opacity-90" />
         <span aria-hidden className="absolute inset-0 flex items-center justify-center">
-          <span className="rounded-full bg-[--color-cta] px-6 py-3 text-white">▶ ভিডিও দেখুন</span>
+          <span className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[--color-cta] px-6 py-3 text-white transition-colors group-hover:bg-[--color-cta-hover]">
+            <Icon name="play" className="h-5 w-5" filled />
+            ভিডিও দেখুন
+          </span>
         </span>
       </summary>
       <iframe
@@ -254,10 +273,10 @@ function Checks({ items, cols = 2 }: { items: readonly string[]; cols?: 1 | 2 })
   const list = items.filter((i) => i.trim() !== '')
   if (list.length === 0) return null
   return (
-    <ul className={`grid gap-2 text-sm text-[--color-muted] ${cols === 2 ? 'sm:grid-cols-2' : ''}`}>
+    <ul className={`grid gap-2.5 text-base text-[--color-muted] ${cols === 2 ? 'sm:grid-cols-2' : ''}`}>
       {list.map((u, i) => (
         <li key={`${i}-${u.slice(0, 12)}`} className="flex gap-2">
-          <span aria-hidden className="text-[--color-success]">✓</span>
+          <Icon name="check" className="mt-1 h-5 w-5 shrink-0 text-[--color-success]" />
           <RichText text={u} />
         </li>
       ))}
@@ -319,10 +338,17 @@ function Hero({ id, c, money }: { id: string; c: SectionContent<'hero'>; money: 
             <img
               src={c.image.url || c.mobileImage.url}
               alt={c.image.alt || c.mobileImage.alt}
+              width={c.image.width ?? c.mobileImage.width}
+              height={c.image.height ?? c.mobileImage.height}
               loading="eager"
               decoding="async"
               fetchPriority="high"
               className="w-full rounded-2xl border border-[--color-line]"
+              style={
+                (c.image.width ?? c.mobileImage.width) && (c.image.height ?? c.mobileImage.height)
+                  ? { aspectRatio: `${c.image.width ?? c.mobileImage.width} / ${c.image.height ?? c.mobileImage.height}`, height: 'auto' }
+                  : undefined
+              }
             />
           </picture>
         )}
@@ -332,10 +358,10 @@ function Hero({ id, c, money }: { id: string; c: SectionContent<'hero'>; money: 
         {(c.bonusIntro || bonuses.length > 0) && (
           <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-[--color-line] bg-[--color-surface] p-5 text-left">
             {c.bonusIntro && <p className="text-sm font-semibold text-[--color-ink]">{c.bonusIntro}</p>}
-            <ul className="mt-2 space-y-1 text-sm text-[--color-muted]">
+            <ul className="mt-2 space-y-1.5 text-base text-[--color-muted]">
               {bonuses.map((b) => (
                 <li key={b} className="flex gap-2">
-                  <span aria-hidden className="text-[--color-success]">+</span>
+                  <Icon name="plus" className="mt-1 h-5 w-5 shrink-0 text-[--color-success]" />
                   {b}
                 </li>
               ))}
@@ -405,7 +431,7 @@ function Book({ id, c }: { id: string; c: SectionContent<'book'> }) {
           <RichText text={c.lead} />
         </p>
       )}
-      <div className="mt-4 space-y-4 text-[--color-muted]">
+      <div className="mt-4 max-w-2xl space-y-4 text-[--color-muted]">
         {c.paragraphs
           .filter((p) => p.trim() !== '')
           .map((p, i) => (
@@ -449,17 +475,6 @@ function Book({ id, c }: { id: string; c: SectionContent<'book'> }) {
   )
 }
 
-const ICONS: Record<string, string> = {
-  check: '✓',
-  spark: '✦',
-  bolt: '⚡',
-  book: '📘',
-  gear: '⚙',
-  chart: '📈',
-  shield: '🛡',
-  star: '★',
-}
-
 function Benefits({ id, c }: { id: string; c: SectionContent<'benefits'> }) {
   const items = c.items.filter((i) => i.enabled && (i.title.trim() || i.description.trim()))
   if (items.length === 0) return null
@@ -472,10 +487,8 @@ function Benefits({ id, c }: { id: string; c: SectionContent<'benefits'> }) {
         <ul className="grid gap-4 sm:grid-cols-2">
           {items.map((i) => (
             <li key={i.id} className="rounded-xl border border-[--color-line] bg-[--color-surface] p-5">
-              <p className="text-lg" aria-hidden>
-                {ICONS[i.icon] ?? '✓'}
-              </p>
-              <p className="mt-1 font-semibold text-[--color-ink]">{i.title}</p>
+              <Icon name={isIconName(i.icon) ? i.icon : 'check'} className="h-6 w-6 text-[--color-accent]" />
+              <p className="mt-2 font-semibold text-[--color-ink]">{i.title}</p>
               {i.description && (
                 <p className="mt-1 text-sm text-[--color-muted]">
                   <RichText text={i.description} />
@@ -561,12 +574,12 @@ function Audience({ id, c }: { id: string; c: SectionContent<'audience'> }) {
         <div className="rounded-2xl border border-[--color-line] bg-[--color-surface] p-6">
           {c.notHeading && <h2 className="text-xl">{c.notHeading}</h2>}
           {c.notLead && <p className="mt-2 text-sm text-[--color-muted]">{c.notLead}</p>}
-          <ul className="mt-4 space-y-2 text-sm text-[--color-muted]">
+          <ul className="mt-4 space-y-2.5 text-base text-[--color-muted]">
             {c.notItems
               .filter((i) => i.trim() !== '')
               .map((i) => (
                 <li key={i} className="flex gap-2">
-                  <span aria-hidden className="text-[--color-line-strong]">✕</span>
+                  <Icon name="x" className="mt-1 h-5 w-5 shrink-0 text-[--color-line-strong]" />
                   {i}
                 </li>
               ))}
@@ -621,9 +634,10 @@ function Testimonials({ id, c }: { id: string; c: SectionContent<'testimonials'>
       <ul className="grid gap-4 sm:grid-cols-2">
         {items.map((t) => (
           <li key={t.id} className="rounded-xl border border-[--color-line] bg-[--color-surface] p-5">
-            <p aria-label={`${t.rating} of 5`} className="text-[--color-warning]">
-              {'★'.repeat(t.rating)}
-              <span className="text-[--color-line]">{'★'.repeat(5 - t.rating)}</span>
+            <p role="img" aria-label={`${t.rating} / ৫ রেটিং`} className="flex gap-0.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Icon key={n} name="star" filled className={`h-4 w-4 ${n <= t.rating ? 'text-[--color-warning]' : 'text-[--color-line]'}`} />
+              ))}
             </p>
             <p className="mt-2 text-[--color-muted]">
               <RichText text={t.review} />

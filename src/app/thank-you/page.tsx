@@ -9,6 +9,7 @@ import { isEntitled, STATE_LABELS_BN, type OrderState } from '@/domain/order-sta
 import { verifyToken } from '@/lib/crypto'
 import { isConfigError, serverEnv } from '@/config/env'
 import { PurchaseEvent } from '@/components/Analytics'
+import { Icon } from '@/components/landing/Icon'
 import { buildDownloadLinks, TOKEN_KIND_RECEIPT } from '@/services/fulfilment'
 
 export const metadata: Metadata = {
@@ -94,9 +95,7 @@ export default async function ThankYouPage({
   return (
     <main id="main" className="px-5 py-16 sm:py-24">
       <div className="mx-auto max-w-lg text-center">
-        <p aria-hidden className="text-4xl">
-          ✅
-        </p>
+        <Icon name="check-circle" className="mx-auto h-12 w-12 text-[--color-success]" />
         <h1 className="mt-4 text-2xl sm:text-3xl">
           ধন্যবাদ{order.name ? `, ${order.name}` : ''}!
         </h1>

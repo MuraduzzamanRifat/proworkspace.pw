@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { CheckoutForm } from '@/components/CheckoutForm'
+import { Icon } from '@/components/landing/Icon'
 import { PAYMENT_METHODS_ADVERTISED } from '@/config/site'
 import { formatBdt } from '@/domain/money'
 import { getCatalogue } from '@/services/catalogue'
@@ -59,9 +60,7 @@ export default async function CheckoutPage({
           <ul className="mt-4 space-y-2 text-sm">
             {product.deliverables.map((d) => (
               <li key={d.key} className="flex gap-2">
-                <span aria-hidden className="text-[--color-success]">
-                  ✓
-                </span>
+                <Icon name="check" className="mt-0.5 h-5 w-5 shrink-0 text-[--color-success]" />
                 <span>
                   <span className="text-[--color-ink]">{d.label}</span>
                   <span className="block text-xs text-[--color-muted]">{d.detail}</span>

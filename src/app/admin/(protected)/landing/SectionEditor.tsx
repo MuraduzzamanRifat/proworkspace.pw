@@ -369,13 +369,22 @@ function UrlHint({ value }: { value: string }) {
 }
 
 function ImageField({ spec, path, value, update, disabled }: FieldProps) {
-  const img = (getAt(value, path) as { url?: string; alt?: string } | undefined) ?? {}
+  const img = (getAt(value, path) as { url?: string; alt?: string; width?: number; height?: number } | undefined) ?? {}
   const url = img.url ?? ''
   const alt = img.alt ?? ''
   const [failed, setFailed] = useState(false)
   const [size, setSize] = useState<'desktop' | 'mobile'>('desktop')
   useEffect(() => setFailed(false), [url])
   const id = path.join('.')
+
+  /** When the preview loads, record its natural size so the page can reserve space. */
+  function onPreviewLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const el = e.currentTarget
+    if (el.naturalWidth > 0 && (img.width !== el.naturalWidth || img.height !== el.naturalHeight)) {
+      update([...path, 'width'], el.naturalWidth)
+      update([...path, 'height'], el.naturalHeight)
+    }
+  }
 
   return (
     <div className="rounded-xl border border-[--color-line] p-4">
@@ -405,7 +414,12 @@ function ImageField({ spec, path, value, update, disabled }: FieldProps) {
             </p>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt={alt} onError={() => setFailed(true)} className="rounded-lg border border-[--color-line] object-contain" style={{ width: size === 'mobile' ? 320 : '100%', maxWidth: 640 }} />
+            <img src={url} alt={alt} onError={() => setFailed(true)} onLoad={onPreviewLoad} className="rounded-lg border border-[--color-line] object-contain" style={{ width: size === 'mobile' ? 320 : '100%', maxWidth: 640 }} />
+          )}
+          {img.width && img.height && (
+            <p className="mt-1 text-xs text-[--color-muted]">
+              আকার {img.width}×{img.height} — পেজে জায়গা আগে থেকে ধরে রাখা হবে, তাই লোড হওয়ার সময় লেখা লাফাবে না।
+            </p>
           )}
         </div>
       )}
