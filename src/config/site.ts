@@ -7,7 +7,7 @@
  */
 
 export const SITE = {
-  brand: 'Corieosity',
+  brand: 'ProWorkspace',
   locale: 'bn-BD',
   /** BCP-47 tag for <html lang>. */
   htmlLang: 'bn',
@@ -78,7 +78,8 @@ export function missingPolicies(): readonly PolicyPage[] {
  * records the same decision being made for the WordPress build: naming
  * "বিকাশ/নগদ/কার্ড" before a gateway existed would have been a false claim.
  */
-// 2026-09-10: the live Paymently checkout page for a real test invoice showed
-// bKash and did not show Nagad. Only what was seen is advertised. Add "নগদ"
-// and "কার্ড" back once the panel confirms they are enabled.
-export const PAYMENT_METHODS_ADVERTISED: readonly string[] = ['বিকাশ']
+// 2026-09-10: taken from the owner's live WooCommerce checkout on
+// proworkspace.online, which states "বিকাশ / নগদ / রকেট" on the same gateway.
+// That is the owner's own claim on a page that takes money today, which is a
+// stronger source than a single scrape of the hosted invoice page.
+export const PAYMENT_METHODS_ADVERTISED: readonly string[] = ['বিকাশ', 'নগদ', 'রকেট']

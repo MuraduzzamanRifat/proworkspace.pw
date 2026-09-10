@@ -26,12 +26,19 @@ export interface DisplayOffer {
   isPopular: boolean
 }
 
+export interface DisplayDeliverable {
+  key: string
+  label: string
+  detail: string
+  filename: string
+}
+
 export interface DisplayProduct {
   sku: string
   title: string
   subtitle: string
   author: string
-  deliverables: readonly string[]
+  deliverables: readonly DisplayDeliverable[]
 }
 
 export interface CatalogueView {
@@ -57,7 +64,12 @@ function seedView(): CatalogueView {
       title: PRODUCT.title,
       subtitle: PRODUCT.subtitle,
       author: PRODUCT.author,
-      deliverables: PRODUCT.deliverables,
+      deliverables: PRODUCT.deliverables.map((d) => ({
+        key: d.key,
+        label: d.label,
+        detail: d.detail,
+        filename: d.filename,
+      })),
     },
     offers: seeded,
     primary: {

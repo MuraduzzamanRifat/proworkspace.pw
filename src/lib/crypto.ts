@@ -120,7 +120,7 @@ export function verifyToken(
 // ---------------------------------------------------------------------------
 
 /**
- * Order number, e.g. `CRS-9F3K2QD7`.
+ * Order number, e.g. `PW-9F3K2QD7`.
  *
  * Excludes I, O, 0 and 1 so a customer reading one over the phone to support
  * cannot produce an ambiguous transcription. 8 characters from a 32-symbol
@@ -129,7 +129,7 @@ export function verifyToken(
  */
 const UNAMBIGUOUS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
-export function generateOrderNumber(prefix = 'CRS'): string {
+export function generateOrderNumber(prefix = 'PW'): string {
   const bytes = randomBytes(8)
   let out = ''
   for (let i = 0; i < 8; i += 1) {

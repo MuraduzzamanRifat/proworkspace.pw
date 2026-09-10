@@ -16,7 +16,8 @@ import { type OrderState } from '@/domain/order-state'
 import { RefundError, decideRefund, type RefundDecision } from '@/domain/refund'
 import { log } from '@/lib/logger'
 import { hasAtLeast, type AdminIdentity } from '@/lib/session'
-import { buildDownloadUrl } from '@/services/fulfilment'
+import { PRODUCT } from '@/config/product'
+import { buildDownloadLinks } from '@/services/fulfilment'
 import { recordAudit } from '@/services/admin-auth'
 import { sendDeliveryEmail } from '@/services/email'
 
@@ -369,20 +370,16 @@ export async function resendDelivery(
     throw new AdminActionError('no_grant', 'এই অর্ডারের সক্রিয় ডাউনলোড অনুমতি নেই।')
   }
 
-  const productRows = await db
-    .select({ title: products.title, deliverables: products.deliverables })
-    .from(products)
-    .limit(1)
+  const productRows = await db.select({ title: products.title }).from(products).limit(1)
   const product = productRows[0]
 
   const result = await sendDeliveryEmail({
     to: order.email,
     customerName: order.name,
     orderNumber: order.orderNumber,
-    productTitle: product?.title ?? 'আপনার বই',
+    productTitle: product?.title ?? PRODUCT.title,
     totalPoisha: order.total,
-    downloadUrl: buildDownloadUrl(order.grantPublicId),
-    deliverables: product?.deliverables ?? [],
+    downloads: buildDownloadLinks(order.grantPublicId),
   })
 
   await recordAudit({

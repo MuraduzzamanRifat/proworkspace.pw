@@ -71,51 +71,62 @@ const BASE_STYLE =
   'font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Bengali",sans-serif;' +
   'line-height:1.7;color:#101216;background:#ffffff;'
 
+export interface DeliveryDownload {
+  label: string
+  url: string
+}
+
 export interface DeliveryEmailArgs {
   to: string
   customerName: string
   orderNumber: string
   productTitle: string
   totalPoisha: number
-  downloadUrl: string
-  deliverables: readonly string[]
+  /** One signed link per file. Three for the bundle. */
+  downloads: readonly DeliveryDownload[]
 }
 
-/** The receipt plus the thing they actually bought. */
+/** The receipt plus the things they actually bought, one link per file. */
 export async function sendDeliveryEmail(args: DeliveryEmailArgs): Promise<SendResult> {
   const name = escapeHtml(args.customerName || 'বন্ধু')
   const title = escapeHtml(args.productTitle)
   const orderNumber = escapeHtml(args.orderNumber)
-  const url = args.downloadUrl
   const amount = formatBdt(poisha(args.totalPoisha))
 
-  const items = args.deliverables
-    .map((d) => `<li style="margin:4px 0;">${escapeHtml(d)}</li>`)
+  const buttons = args.downloads
+    .map(
+      (d) => `<p style="margin:12px 0;">
+    <a href="${d.url}" style="background:#4F46E5;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:8px;display:inline-block;font-weight:600;">${escapeHtml(d.label)}</a>
+  </p>`,
+    )
+    .join('')
+
+  const fallbacks = args.downloads
+    .map(
+      (d) =>
+        `<li style="margin:6px 0;word-break:break-all;"><strong>${escapeHtml(d.label)}</strong><br>${escapeHtml(d.url)}</li>`,
+    )
     .join('')
 
   const html = `<div style="${BASE_STYLE}max-width:560px;margin:0 auto;padding:24px;">
   <h1 style="font-size:20px;margin:0 0 16px;">ধন্যবাদ, ${name}!</h1>
-  <p style="margin:0 0 16px;">আপনার অর্ডার সম্পন্ন হয়েছে। নিচের বোতাম থেকে বইটি ডাউনলোড করুন।</p>
-  <p style="margin:24px 0;">
-    <a href="${url}" style="background:#4F46E5;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;display:inline-block;font-weight:600;">বই ডাউনলোড করুন</a>
-  </p>
-  <p style="margin:0 0 8px;font-size:14px;color:#5A6478;">বোতাম কাজ না করলে এই লিংকটি ব্রাউজারে পেস্ট করুন:<br>
-    <span style="word-break:break-all;">${escapeHtml(url)}</span></p>
+  <p style="margin:0 0 16px;">আপনার অর্ডার সম্পন্ন হয়েছে। নিচের বোতামগুলো থেকে প্রতিটি ফাইল ডাউনলোড করুন।</p>
+  <p style="margin:0 0 4px;"><strong>${title}</strong></p>
+  ${buttons}
+  <p style="margin:16px 0 8px;font-size:14px;color:#5A6478;">বোতাম কাজ না করলে এই লিংকগুলো ব্রাউজারে পেস্ট করুন:</p>
+  <ul style="margin:0 0 16px;padding-left:20px;font-size:13px;color:#5A6478;">${fallbacks}</ul>
   <hr style="border:none;border-top:1px solid #E5E7EB;margin:24px 0;">
-  <p style="margin:0 0 8px;"><strong>${title}</strong></p>
-  <ul style="margin:0 0 16px;padding-left:20px;font-size:14px;">${items}</ul>
   <p style="margin:0;font-size:14px;color:#5A6478;">অর্ডার নম্বর: <strong>${orderNumber}</strong><br>পরিশোধিত: <strong>${escapeHtml(amount)}</strong></p>
-  <p style="margin:24px 0 0;font-size:13px;color:#5A6478;">এই লিংকটি আপনার ব্যক্তিগত। ভবিষ্যতের সব সংস্করণ বিনামূল্যে পাবেন।</p>
+  <p style="margin:24px 0 0;font-size:13px;color:#5A6478;">এই লিংকগুলো আপনার ব্যক্তিগত এবং এক বছর সক্রিয় থাকবে। বইয়ের ভবিষ্যৎ সংস্করণ বিনামূল্যে পাবেন।</p>
 </div>`
 
   const text = [
     `ধন্যবাদ, ${args.customerName || 'বন্ধু'}!`,
     '',
-    'আপনার অর্ডার সম্পন্ন হয়েছে। এই লিংক থেকে বইটি ডাউনলোড করুন:',
-    url,
+    'আপনার অর্ডার সম্পন্ন হয়েছে। প্রতিটি ফাইল এই লিংকগুলো থেকে ডাউনলোড করুন:',
     '',
     args.productTitle,
-    ...args.deliverables.map((d) => `- ${d}`),
+    ...args.downloads.flatMap((d) => [`- ${d.label}`, `  ${d.url}`]),
     '',
     `অর্ডার নম্বর: ${args.orderNumber}`,
     `পরিশোধিত: ${amount}`,
@@ -123,7 +134,7 @@ export async function sendDeliveryEmail(args: DeliveryEmailArgs): Promise<SendRe
 
   return send({
     to: args.to,
-    subject: `আপনার বই প্রস্তুত — ${args.productTitle}`,
+    subject: `আপনার ফাইলগুলো প্রস্তুত — ${args.productTitle}`,
     html,
     text,
   })

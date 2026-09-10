@@ -1,11 +1,26 @@
 # ai-agent-ebook-funnel
 
-Single-product sales funnel for **এআই এজেন্ট দিয়ে ইনকাম** (Corieosity), a
-275-page Bengali guide to n8n, MCP and AI automation. Sold as a digital
-download at ৳১,৯৯০.
+Single-product sales funnel for the **AI Agent Development Bundle**
+(ProWorkspace), sold as a digital download at ৳৯৯৯:
 
-Built 2026-09-10. Not yet deployed. See **Production checklist** before it
-takes a real payment.
+| Deliverable | Separate price |
+|---|---|
+| এআই এজেন্ট দিয়ে ইনকাম — the owner's 275-page Bengali guide to n8n, MCP and AI automation (PDF) | ৳1,990 |
+| 4,000 ready n8n workflow templates (ZIP) | ৳2,000 |
+| 10 million email research dataset (ZIP) | ৳1,499 |
+
+The list price shown on the page is the **sum of that column**, computed in
+code and pinned by a test. It is not a typed-in anchor.
+
+**What the bundle deliberately does not contain.** The owner's earlier funnel
+on proworkspace.online filled the "book" slot with Manning's *AI Agents in
+Action, Second Edition*. Manning owns that title and no distribution licence
+exists, so this project does not sell it. The book slot is the owner's own
+ebook. Swapping it is a change to `src/config/product.ts` plus
+`npm run db:sync-catalogue`, if a licence ever exists.
+
+Built 2026-09-10. Live at https://ai-agent-ebook-funnel.vercel.app. See
+**Production checklist** before it takes a real payment.
 
 ---
 
@@ -57,8 +72,15 @@ exactly one caller wins.
 
 **One offer ships.** The offer system, coupons, order bump and upsell are fully
 built in the schema and pricing engine, and seeded with the single real offer.
-Inventing a fake struck-through price or a "2-pack" for one PDF would be a dark
-pattern, and the book's own evidence policy argues against it.
+The struck-through list price is the sum of the three components' separate
+prices, derived in `src/config/product.ts` and pinned by
+`tests/bundle-pricing.test.ts`; the page never shows a number that is not
+arithmetic over real prices.
+
+**Changing the product after launch.** `npm run db:seed` never overwrites a
+price. `npm run db:sync-catalogue` is the explicit, audit-logged way to push a
+config change into an existing database; it updates the single product and
+offer rows in place, so historical `order_items` snapshots are untouched.
 
 ---
 
@@ -103,7 +125,7 @@ to work.
 | `DOWNLOAD_SECRET` | Signs download and receipt tokens. 32+ chars. |
 | `UDDOKTAPAY_BASE_URL` | Panel base URL, no trailing slash. |
 | `CRON_SECRET` | Bearer token Vercel Cron must present to `/api/cron/*`. 32+ chars. |
-| `EBOOK_FILE_URL` | Private URL of the PDF bundle. Never public. |
+| `PRODUCT_FILES` | JSON map of deliverable key → private file URL: `{"ebook":…,"workflows":…,"leads":…}`. Streamed through a signed route; never exposed. Any missing key returns an honest "file not ready" and shows as a launch blocker. |
 
 > **`NEXT_PUBLIC_SITE_URL` is inlined at BUILD time, not read at runtime.**
 > Next.js substitutes every `NEXT_PUBLIC_*` value into the bundle during
@@ -254,8 +276,9 @@ Blocking. The admin dashboard shows these as launch blockers automatically.
       product, but it has to be stated. Fill in `POLICIES` in
       `src/config/site.ts`.
 - [ ] Write privacy policy, terms, and contact pages (same file).
-- [ ] Upload the PDF bundle to private storage and set `EBOOK_FILE_URL`.
-      **Until this exists, a paid customer's download returns 503.**
+- [ ] Upload the three files to private storage and set `PRODUCT_FILES`
+      with all three keys. **Until each exists, that file's download returns
+      503 to a paying customer.** The dashboard lists each missing one.
 - [x] Live `UDDOKTAPAY_API_KEY` and `UDDOKTAPAY_BASE_URL` set (2026-09-10).
       Verified: a production checkout created order `CRS-UFVFWDFX` and the
       panel at `workspace.paymently.io` returned a hosted payment page.

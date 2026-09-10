@@ -1,7 +1,8 @@
 import { and, eq, isNull, or, sql } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 
-import { serverEnv } from '@/config/env'
+import { productFileUrl, serverEnv } from '@/config/env'
+import { DELIVERABLES } from '@/config/product'
 import { getDb } from '@/db'
 import { downloadEvents, downloadGrants, orders } from '@/db/schema'
 import { TokenError, verifyToken } from '@/lib/crypto'
@@ -135,12 +136,18 @@ async function handle(
     return deny('limit_reached', 'ডাউনলোডের সর্বোচ্চ সীমা শেষ হয়েছে।', 429)
   }
 
-  // --- 4. Serve the file ---------------------------------------------------
-  const fileUrl = serverEnv().EBOOK_FILE_URL
+  // --- 4. Which file, and do we have it? -----------------------------------
+  const fileKey = new URL(request.url).searchParams.get('f') ?? ''
+  const item = DELIVERABLES.find((d) => d.key === fileKey)
+  if (!item) {
+    return jsonError('এই ফাইলটি এই অর্ডারের অংশ নয়।', 404)
+  }
+
+  const fileUrl = productFileUrl(item.key)
   if (!fileUrl) {
-    // Deliberately NOT a placeholder file. Shipping a stub PDF to a paying
+    // Deliberately NOT a placeholder file. Shipping a stub to a paying
     // customer would be worse than an honest error the owner can see.
-    log.error('download.file_not_configured', { orderNumber: grant.orderNumber })
+    log.error('download.file_not_configured', { orderNumber: grant.orderNumber, file: item.key })
     return jsonError(
       'ফাইলটি এখনো প্রস্তুত নয়। আমাদের সাথে যোগাযোগ করুন, আমরা দ্রুত পাঠিয়ে দেব।',
       503,
@@ -168,14 +175,13 @@ async function handle(
     reason: '',
   })
 
-  log.info('download.served', { orderNumber: grant.orderNumber, count: claimed[0]?.count })
+  log.info('download.served', { orderNumber: grant.orderNumber, file: item.key, count: claimed[0]?.count })
 
-  const filename = 'ai-agent-diye-income.pdf'
   return new Response(upstream.body, {
     status: 200,
     headers: {
-      'Content-Type': upstream.headers.get('content-type') ?? 'application/pdf',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Type': upstream.headers.get('content-type') ?? 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${item.filename}"`,
       'Cache-Control': 'private, no-store, max-age=0',
       'X-Content-Type-Options': 'nosniff',
       ...(upstream.headers.get('content-length')

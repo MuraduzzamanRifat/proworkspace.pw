@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
 
 import { clientEnv, serverEnv } from '@/config/env'
+import { DELIVERABLES, PRODUCT } from '@/config/product'
 import { getDb, type Database } from '@/db'
 import {
   checkoutSessions,
@@ -50,7 +51,8 @@ export interface SettlementResult {
   outcome: SettlementOutcome
   orderId?: string
   orderNumber?: string
-  downloadUrl?: string
+  /** One signed URL per deliverable. */
+  downloads?: Array<{ key: string; label: string; url: string }>
   emailSent?: boolean
   detail?: string
 }
@@ -241,24 +243,20 @@ export async function settlePayment(
   // --- Deliver. Everything past this point is best-effort. -----------------
   // The customer has paid and the grant exists. If email fails, the thank-you
   // page still shows the download link, and the admin can resend.
-  const downloadUrl = buildDownloadUrl(grantPublicId)
+  const downloads = buildDownloadLinks(grantPublicId)
 
   let emailSent = false
   try {
-    const productRows = await db
-      .select({ title: products.title, deliverables: products.deliverables })
-      .from(products)
-      .limit(1)
+    const productRows = await db.select({ title: products.title }).from(products).limit(1)
     const product = productRows[0]
 
     const result = await sendDeliveryEmail({
       to: row.email,
       customerName: row.name,
       orderNumber: row.orderNumber,
-      productTitle: product?.title ?? 'আপনার বই',
+      productTitle: product?.title ?? PRODUCT.title,
       totalPoisha: row.totalPoisha,
-      downloadUrl,
-      deliverables: product?.deliverables ?? [],
+      downloads,
     })
     emailSent = result.sent
 
@@ -288,7 +286,7 @@ export async function settlePayment(
     outcome: 'fulfilled',
     orderId: row.orderId,
     orderNumber: row.orderNumber,
-    downloadUrl,
+    downloads,
     emailSent,
   }
 }
@@ -304,12 +302,27 @@ export async function settlePayment(
 export const TOKEN_KIND_DOWNLOAD = 'dl'
 export const TOKEN_KIND_RECEIPT = 'rcpt'
 
-/** A signed, expiring URL. The grant id alone is never enough to download. */
-export function buildDownloadUrl(grantPublicId: string): string {
+/**
+ * A signed, expiring URL for ONE deliverable. The grant id alone is never
+ * enough to download, and the file key rides in the query string so a single
+ * grant covers every file in the bundle.
+ */
+export function buildDownloadUrl(grantPublicId: string, fileKey: string): string {
   const secret = serverEnv().DOWNLOAD_SECRET
   const exp = Math.floor(Date.now() / 1000) + DOWNLOAD_TTL_DAYS * 86_400
   const token = signToken({ sub: grantPublicId, exp, kind: TOKEN_KIND_DOWNLOAD }, secret)
-  return `${clientEnv.NEXT_PUBLIC_SITE_URL}/api/download/${token}`
+  return `${clientEnv.NEXT_PUBLIC_SITE_URL}/api/download/${token}?f=${encodeURIComponent(fileKey)}`
+}
+
+/** One link per deliverable in the bundle, in catalogue order. */
+export function buildDownloadLinks(
+  grantPublicId: string,
+): Array<{ key: string; label: string; url: string }> {
+  return DELIVERABLES.map((d) => ({
+    key: d.key,
+    label: d.label,
+    url: buildDownloadUrl(grantPublicId, d.key),
+  }))
 }
 
 /**

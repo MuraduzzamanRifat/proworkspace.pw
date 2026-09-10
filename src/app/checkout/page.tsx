@@ -55,20 +55,30 @@ export default async function CheckoutPage({
           <p className="font-semibold text-[--color-ink]">{product.title}</p>
           <p className="mt-1 text-sm text-[--color-muted]">{primary.label}</p>
 
-          <ul className="mt-4 space-y-1.5 text-sm text-[--color-muted]">
+          <ul className="mt-4 space-y-2 text-sm">
             {product.deliverables.map((d) => (
-              <li key={d} className="flex gap-2">
+              <li key={d.key} className="flex gap-2">
                 <span aria-hidden className="text-[--color-success]">
                   ✓
                 </span>
-                <span>{d}</span>
+                <span>
+                  <span className="text-[--color-ink]">{d.label}</span>
+                  <span className="block text-xs text-[--color-muted]">{d.detail}</span>
+                </span>
               </li>
             ))}
           </ul>
 
           <div className="mt-5 flex items-baseline justify-between border-t border-[--color-line] pt-4">
             <span className="text-[--color-muted]">সর্বমোট</span>
-            <span className="text-2xl font-bold text-[--color-ink]">{priceLabel}</span>
+            <span className="text-right">
+              {primary.listPrice > primary.price && (
+                <span className="mr-2 text-sm text-[--color-line-strong] line-through">
+                  {formatBdt(primary.listPrice)}
+                </span>
+              )}
+              <span className="text-2xl font-bold text-[--color-ink]">{priceLabel}</span>
+            </span>
           </div>
           {/* No shipping row: this is a download. Showing "shipping ৳0" on a
               digital product invites the question of where it is shipping to. */}

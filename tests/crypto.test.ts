@@ -117,7 +117,7 @@ describe('hashing and ids', () => {
 
 describe('order numbers', () => {
   test('follows the PREFIX-XXXXXXXX shape', () => {
-    assert.match(generateOrderNumber(), /^CRS-[2-9A-HJ-NP-Z]{8}$/)
+    assert.match(generateOrderNumber(), /^PW-[2-9A-HJ-NP-Z]{8}$/)
   })
 
   test('excludes characters that are ambiguous when read aloud', () => {

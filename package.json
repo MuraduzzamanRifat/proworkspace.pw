@@ -17,6 +17,7 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "node --env-file=.env.local --import tsx scripts/migrate.ts",
     "db:seed": "node --env-file=.env.local --import tsx scripts/seed.ts",
+    "db:sync-catalogue": "node --env-file=.env.local --import tsx scripts/sync-catalogue.ts",
     "verify": "npm run typecheck && npm run test"
   },
   "dependencies": {

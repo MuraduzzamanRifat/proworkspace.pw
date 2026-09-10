@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { missingPolicies } from '@/config/site'
 import { formatBdt, poisha } from '@/domain/money'
 import { STATE_LABELS_BN } from '@/domain/order-state'
-import { emailConfigured, paymentsConfigured, serverEnv } from '@/config/env'
+import { emailConfigured, missingProductFiles, paymentsConfigured, serverEnv } from '@/config/env'
+import { PRODUCT } from '@/config/product'
 import { getDashboardMetrics, getHealthAlerts, getRecentOrders } from '@/services/metrics'
 
 export const dynamic = 'force-dynamic'
@@ -171,8 +172,9 @@ function buildLaunchBlockers(): string[] {
   if (!emailConfigured()) {
     out.push('ইমেইল প্রোভাইডার সেট করা হয়নি — ডেলিভারি ইমেইল যাবে না।')
   }
-  if (!serverEnv().EBOOK_FILE_URL) {
-    out.push('বইয়ের ফাইলের ঠিকানা সেট করা হয়নি — ডাউনলোড কাজ করবে না।')
+  for (const key of missingProductFiles(PRODUCT.deliverables.map((d) => d.key))) {
+    const item = PRODUCT.deliverables.find((d) => d.key === key)
+    out.push(`ফাইল সেট করা হয়নি: "${item?.label ?? key}" — ক্রেতা এটি ডাউনলোড করতে পারবেন না।`)
   }
   if (!serverEnv().ADMIN_ALERT_EMAIL) {
     out.push('অ্যাডমিন সতর্কতার ইমেইল সেট করা হয়নি।')

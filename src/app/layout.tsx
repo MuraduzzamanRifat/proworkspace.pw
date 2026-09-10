@@ -5,7 +5,7 @@ import { Analytics as VercelAnalytics } from '@vercel/analytics/next'
 
 import { Analytics } from '@/components/Analytics'
 import { clientEnv } from '@/config/env'
-import { PRODUCT } from '@/config/product'
+import { BOOK, PRODUCT } from '@/config/product'
 import { SITE } from '@/config/site'
 import './globals.css'
 
@@ -46,9 +46,8 @@ export const metadata: Metadata = {
     template: `%s | ${PRODUCT.brand}`,
   },
   description:
-    `n8n, MCP আর এআই এজেন্ট দিয়ে সিস্টেম বানানোর পূর্ণাঙ্গ বাংলা গাইড। ` +
-    `${PRODUCT.pageCount} পৃষ্ঠা, ${PRODUCT.chapterCount}টি অধ্যায়, ` +
-    `${PRODUCT.caseStudyCount}টি সম্পূর্ণ কেস স্টাডি, ${PRODUCT.promptCount}টি প্রস্তুত প্রম্পট।`,
+    `${BOOK.title} (${BOOK.pageCount} পৃষ্ঠা, ${BOOK.chapterCount} অধ্যায়) + 4,000 n8n workflow templates ` +
+    `+ 10 million email research dataset — এক Bundle-এ। শুধু Prompt নয়, বাস্তব AI Agent System তৈরি করা শিখুন।`,
   authors: [{ name: PRODUCT.author }],
   creator: PRODUCT.brand,
   publisher: PRODUCT.brand,
@@ -58,7 +57,7 @@ export const metadata: Metadata = {
     locale: 'bn_BD',
     siteName: PRODUCT.brand,
     title: `${PRODUCT.title} — ${PRODUCT.subtitle}`,
-    description: `${PRODUCT.pageCount} পৃষ্ঠার পূর্ণাঙ্গ বাংলা গাইড।`,
+    description: `${BOOK.title} + 4,000 workflow templates + 10M email research dataset।`,
   },
   twitter: {
     card: 'summary_large_image',

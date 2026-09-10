@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/neon-serverless'
 import ws from 'ws'
 
-import { OFFERS, PRODUCT } from '../src/config/product'
+import { BOOK, OFFERS, PRODUCT } from '../src/config/product'
 import * as schema from '../src/db/schema'
 import { hashPassword, validatePasswordStrength } from '../src/lib/password'
 
@@ -39,15 +39,22 @@ async function main(): Promise<void> {
       author: PRODUCT.author,
       isActive: true,
       facts: {
-        pageCount: PRODUCT.pageCount,
-        chapterCount: PRODUCT.chapterCount,
-        appendixCount: PRODUCT.appendixCount,
-        promptCount: PRODUCT.promptCount,
-        caseStudyCount: PRODUCT.caseStudyCount,
-        edition: PRODUCT.edition,
-        version: PRODUCT.version,
+        bookTitle: BOOK.title,
+        bookAuthor: BOOK.author,
+        pageCount: BOOK.pageCount,
+        chapterCount: BOOK.chapterCount,
+        appendixCount: BOOK.appendixCount,
+        promptCount: BOOK.promptCount,
+        caseStudyCount: BOOK.caseStudyCount,
+        edition: BOOK.edition,
+        version: BOOK.version,
       },
-      deliverables: [...PRODUCT.deliverables],
+      deliverables: PRODUCT.deliverables.map((d) => ({
+        key: d.key,
+        label: d.label,
+        detail: d.detail,
+        filename: d.filename,
+      })),
     })
     // Touch only the descriptive fields. Never the price.
     .onConflictDoUpdate({

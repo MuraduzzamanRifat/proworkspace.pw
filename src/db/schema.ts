@@ -126,8 +126,11 @@ export const products = pgTable(
     /** Verified facts printed in marketing copy. Kept here so the admin can
      *  correct them without a deploy, and so every surface reads one number. */
     facts: jsonb('facts').$type<Record<string, number | string>>().notNull().default({}),
-    /** Deliverable names shown to the buyer. Not file paths. */
-    deliverables: jsonb('deliverables').$type<string[]>().notNull().default([]),
+    /** Files the buyer receives: key, label, detail, filename. Never URLs. */
+    deliverables: jsonb('deliverables')
+      .$type<Array<{ key: string; label: string; detail: string; filename: string }>>()
+      .notNull()
+      .default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },

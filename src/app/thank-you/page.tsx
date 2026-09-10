@@ -9,7 +9,7 @@ import { isEntitled, STATE_LABELS_BN, type OrderState } from '@/domain/order-sta
 import { verifyToken } from '@/lib/crypto'
 import { isConfigError, serverEnv } from '@/config/env'
 import { PurchaseEvent } from '@/components/Analytics'
-import { buildDownloadUrl, TOKEN_KIND_RECEIPT } from '@/services/fulfilment'
+import { buildDownloadLinks, TOKEN_KIND_RECEIPT } from '@/services/fulfilment'
 
 export const metadata: Metadata = {
   title: 'ধন্যবাদ',
@@ -86,10 +86,10 @@ export default async function ThankYouPage({
   if (!order) return <Problem body="অর্ডারটি খুঁজে পাওয়া যায়নি।" />
 
   const entitled = isEntitled(order.status)
-  const downloadUrl =
+  const downloads =
     entitled && order.grantPublicId && !order.revokedAt
-      ? buildDownloadUrl(order.grantPublicId)
-      : null
+      ? buildDownloadLinks(order.grantPublicId)
+      : []
 
   return (
     <main id="main" className="px-5 py-16 sm:py-24">
@@ -103,8 +103,8 @@ export default async function ThankYouPage({
 
         {entitled ? (
           <p className="mt-3 text-[--color-muted]">
-            আপনার পেমেন্ট সম্পন্ন হয়েছে। বইটি এখনই ডাউনলোড করুন — একই লিংক আপনার ইমেইলেও পাঠানো
-            হয়েছে।
+            আপনার পেমেন্ট সম্পন্ন হয়েছে। প্রতিটি ফাইল এখনই ডাউনলোড করুন — একই লিংকগুলো আপনার
+            ইমেইলেও পাঠানো হয়েছে।
           </p>
         ) : (
           <p className="mt-3 text-[--color-muted]">
@@ -113,15 +113,19 @@ export default async function ThankYouPage({
           </p>
         )}
 
-        {downloadUrl && (
-          <p className="mt-8">
-            <a
-              href={downloadUrl}
-              className="inline-block rounded-xl bg-[--color-cta] px-8 py-4 text-lg font-semibold text-white hover:bg-[--color-cta-hover]"
-            >
-              বই ডাউনলোড করুন
-            </a>
-          </p>
+        {downloads.length > 0 && (
+          <ul className="mx-auto mt-8 max-w-sm space-y-3">
+            {downloads.map((d) => (
+              <li key={d.key}>
+                <a
+                  href={d.url}
+                  className="block rounded-xl bg-[--color-cta] px-6 py-4 font-semibold text-white hover:bg-[--color-cta-hover]"
+                >
+                  {d.label}
+                </a>
+              </li>
+            ))}
+          </ul>
         )}
 
         <dl className="mx-auto mt-10 max-w-sm space-y-2 rounded-2xl border border-[--color-line] bg-[--color-surface] p-5 text-left text-sm">

@@ -84,7 +84,33 @@ const serverSchema = z.object({
   MAIL_FROM: z.string().default('Corieosity <noreply@example.com>'),
   ADMIN_ALERT_EMAIL: z.string().default(''),
 
-  EBOOK_FILE_URL: z.string().default(''),
+  /**
+   * JSON map of deliverable key -> private file URL, e.g.
+   *   {"ebook":"https://…/x.pdf","workflows":"https://…/w.zip","leads":"https://…/l.zip"}
+   * Keys must match DELIVERABLES in src/config/product.ts. The app streams
+   * these through a signed route; the URLs themselves are never exposed.
+   */
+  PRODUCT_FILES: z
+    .string()
+    .default('')
+    .superRefine((val, ctx) => {
+      if (val.trim() === '') return
+      try {
+        const parsed: unknown = JSON.parse(val)
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'PRODUCT_FILES must be a JSON object' })
+          return
+        }
+        for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+          if (typeof v !== 'string' || !/^https?:\/\//.test(v)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: `PRODUCT_FILES.${k} must be an http(s) URL` })
+          }
+        }
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'PRODUCT_FILES is not valid JSON' })
+      }
+    })
+    .transform((val): Record<string, string> => (val.trim() === '' ? {} : (JSON.parse(val) as Record<string, string>))),
 
   META_CAPI_ACCESS_TOKEN: z.string().default(''),
   META_CAPI_TEST_EVENT_CODE: z.string().default(''),
@@ -182,6 +208,18 @@ export function paymentsConfigured(): boolean {
 /** True when transactional email can actually be delivered. */
 export function emailConfigured(): boolean {
   return serverEnv().RESEND_API_KEY.trim() !== ''
+}
+
+/** Private URL for one deliverable, or null if not configured. */
+export function productFileUrl(key: string): string | null {
+  const url = serverEnv().PRODUCT_FILES[key]
+  return url && url.trim() !== '' ? url : null
+}
+
+/** Deliverable keys that have no file yet. Empty means delivery is complete. */
+export function missingProductFiles(keys: readonly string[]): string[] {
+  const files = serverEnv().PRODUCT_FILES
+  return keys.filter((k) => !files[k] || files[k].trim() === '')
 }
 
 export const siteUrl = clientEnv.NEXT_PUBLIC_SITE_URL
