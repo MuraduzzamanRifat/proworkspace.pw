@@ -1,5 +1,5 @@
 import { Pool, neonConfig } from '@neondatabase/serverless'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/neon-serverless'
 import ws from 'ws'
 
@@ -110,7 +110,9 @@ async function main(): Promise<void> {
   for (const [key, value, label] of settingsRows) {
     await db
       .insert(schema.settings)
-      .values({ key, value, label })
+      // A JS null must land as the JSON value `null`, not SQL NULL: the column
+      // is NOT NULL and "no limit" is a real setting, not a missing one.
+      .values({ key, value: value === null ? sql`'null'::jsonb` : value, label })
       .onConflictDoNothing({ target: schema.settings.key })
   }
   console.log(`settings ${settingsRows.length}`)

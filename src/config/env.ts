@@ -56,7 +56,12 @@ const serverSchema = z.object({
     .url()
     .default('https://sandbox.uddoktapay.com')
     .transform((u) => u.replace(/\/+$/, '')),
-  UDDOKTAPAY_API_KEY: requiredInProd('UDDOKTAPAY_API_KEY'),
+  // Deliberately NOT required at boot. `paymentsConfigured()` gates every
+  // money path: the checkout page hides its form, the checkout API answers
+  // "gateway unavailable", and the webhook refuses, all without this key.
+  // Making it a hard requirement would also lock the owner out of the admin
+  // before the gateway is wired, which is exactly when the admin is needed.
+  UDDOKTAPAY_API_KEY: z.string().default(''),
 
   RESEND_API_KEY: z.string().default(''),
   MAIL_FROM: z.string().default('Corieosity <noreply@example.com>'),

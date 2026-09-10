@@ -102,7 +102,6 @@ to work.
 | `SESSION_SECRET` | Signs admin session cookies. 32+ chars. |
 | `DOWNLOAD_SECRET` | Signs download and receipt tokens. 32+ chars. |
 | `UDDOKTAPAY_BASE_URL` | Panel base URL, no trailing slash. |
-| `UDDOKTAPAY_API_KEY` | Sent as `RT-UDDOKTAPAY-API-KEY`; also required to match on inbound webhooks. |
 | `CRON_SECRET` | Bearer token Vercel Cron must present to `/api/cron/*`. 32+ chars. |
 | `EBOOK_FILE_URL` | Private URL of the PDF bundle. Never public. |
 
@@ -117,6 +116,7 @@ Optional. The funnel works fully without every one of these.
 
 | Variable | Effect if unset |
 |---|---|
+| `UDDOKTAPAY_API_KEY` | **Checkout is disabled**: the checkout page shows a notice instead of a form, the API answers "gateway unavailable", the webhook refuses. Admin, landing and cron all keep working. Sent as `RT-UDDOKTAPAY-API-KEY`; inbound webhooks must present the same value. |
 | `RESEND_API_KEY` | Delivery emails are logged, not sent. Orders still complete. |
 | `MAIL_FROM` | Falls back to a placeholder sender. |
 | `ADMIN_ALERT_EMAIL` | No new-order or mismatch alerts. |
