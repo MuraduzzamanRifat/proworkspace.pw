@@ -289,10 +289,12 @@ dashboard surfaces the count.
 
 ## Known limitations
 
-- **No git.** There is no `git` binary anywhere on this machine (checked PATH,
-  Program Files, GitHub Desktop and the local toolchain). This project is
-  therefore unversioned, and `.github/workflows/ci.yml` cannot run until git is
-  installed and a remote exists. Fix this before any further work.
+- **Repository is public.** It lives at
+  `github.com/MuraduzzamanRifat/proworkspace.pw` and anyone can read it. That
+  is safe only because no secret is committed: `.gitignore` excludes every
+  `.env*` variant except the template, and the initial commit was content-
+  scanned for secret-shaped strings before push. Keep it that way, or make the
+  repository private in Settings → General → Danger Zone.
 - **Refunds are recorded, not initiated.** `recordRefund` applies the
   consequences of a refund — status, refunded total, revocation of download
   access on a full refund — but moves no money. The refund itself is issued in
