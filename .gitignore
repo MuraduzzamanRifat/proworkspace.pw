@@ -1,0 +1,43 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next
+.next/
+out/
+build/
+next-env.d.ts
+
+# production assets that must never be committed
+# The ebook PDF and bundle are the paid product. They are served from
+# private object storage, never from the repo or the public/ folder.
+private/
+public/downloads/
+
+# env — every one of these holds live secrets.
+#
+# The patterns are deliberately wide. A `.env.local.backup` created during a
+# migration is exactly as sensitive as `.env.local`, and a narrow rule that
+# only names the canonical filenames is how secrets reach a public repo.
+# `.env.example` is re-included below because it is a template with no values.
+.env
+.env.*
+*.env
+!.env.example
+
+# Anything a tool or a human left behind mid-operation.
+*.backup
+*.backup-*
+*.bak
+*.orig
+*.rej
+
+# misc
+.DS_Store
+*.pem
+.vercel
+*.tsbuildinfo
+coverage/
+.idea/
+.vscode/

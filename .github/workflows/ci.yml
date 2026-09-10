@@ -1,0 +1,65 @@
+name: CI
+
+# Runs on every push and pull request. Deliberately requires NO secrets:
+# the test suite needs neither a database nor a network, and the production
+# build falls back to the seeded catalogue when DATABASE_URL is absent. A CI
+# job that needs production credentials is a job that gets disabled.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 20.19 rather than 20.18: eslint-visitor-keys declares
+          # ^20.19.0 || ^22.13.0 and warns below that.
+          node-version: '20.19'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  # Migrations are checked for drift, not applied. Applying them from CI would
+  # mean CI holds production database credentials.
+  migration-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Regenerate migrations and fail if the schema drifted
+        run: |
+          npx drizzle-kit generate --name ci-drift-check
+          if [ -n "$(git status --porcelain src/db/migrations)" ]; then
+            echo "::error::The Drizzle schema has changes with no committed migration."
+            echo "Run 'npm run db:generate' and commit the result."
+            git status --porcelain src/db/migrations
+            exit 1
+          fi

@@ -1,0 +1,27 @@
+# Normalise line endings.
+#
+# This repo is edited on Windows and built on Linux (Vercel, GitHub Actions).
+# Without this, every file committed from Windows lands with CRLF, and the
+# next Linux contributor sees the whole tree as modified. Store LF in git,
+# check out whatever the platform prefers.
+* text=auto eol=lf
+
+# Shell scripts must keep LF even on Windows checkouts, or they fail with
+# "bad interpreter: /bin/sh^M" when they run in CI.
+*.sh text eol=lf
+
+# Binary, never diffed or line-ending converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ico binary
+
+# Generated. Collapse it in pull request diffs so review stays readable.
+package-lock.json linguist-generated=true -diff
+src/db/migrations/meta/*.json linguist-generated=true -diff
