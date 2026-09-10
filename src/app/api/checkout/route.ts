@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { formatBdt, poisha } from '@/domain/money'
+import { withConfigGuard } from '@/lib/http'
 import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
 import { log } from '@/lib/logger'
 import { CheckoutError, startCheckout } from '@/services/checkout'
@@ -19,6 +20,10 @@ export const dynamic = 'force-dynamic'
  */
 
 export async function POST(request: Request): Promise<Response> {
+  return withConfigGuard(() => handle(request))
+}
+
+async function handle(request: Request): Promise<Response> {
   const ip = clientIp(request.headers)
 
   // 12 checkout attempts per IP per 10 minutes. Generous for a human who

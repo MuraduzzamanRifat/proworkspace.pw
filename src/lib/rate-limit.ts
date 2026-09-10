@@ -26,11 +26,15 @@ export async function consumeRateLimit(
   key: string,
   limit: number,
   windowSeconds: number,
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<RateLimitResult> {
   if (limit <= 0) throw new Error('limit must be positive')
 
   try {
+    // Inside the try on purpose. If the database is unreachable or not yet
+    // configured, this limiter fails OPEN (see below); resolving the handle as
+    // a default parameter would throw before this block and fail CLOSED.
+    const db = dbParam ?? getDb()
     const result = await db.execute(sql`
       INSERT INTO rate_limits (key, window_start, count)
       VALUES (${key}, now(), 1)

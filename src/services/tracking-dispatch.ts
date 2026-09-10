@@ -44,9 +44,10 @@ interface ClaimedEvent {
 
 export async function dispatchPendingTrackingEvents(
   limit = 50,
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<DispatchSummary> {
   const env = serverEnv()
+  const db = dbParam ?? getDb()
   const pixelId = clientEnv.NEXT_PUBLIC_META_PIXEL_ID
   const token = env.META_CAPI_ACCESS_TOKEN
 

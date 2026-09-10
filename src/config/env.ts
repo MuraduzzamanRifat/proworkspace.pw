@@ -83,14 +83,36 @@ const clientSchema = z.object({
   NEXT_PUBLIC_GA4_MEASUREMENT_ID: z.string().default(''),
 })
 
+/**
+ * Thrown when the environment fails validation.
+ *
+ * A distinct class so that request handlers can tell "this deployment is
+ * not configured" apart from every other failure and answer with a 503 and a
+ * logged reason, instead of an opaque function crash. On a serverless
+ * platform there is no boot to fail fast at; each invocation is the boot.
+ */
+export class ConfigError extends Error {
+  readonly missing: readonly string[]
+  constructor(message: string, missing: readonly string[]) {
+    super(message)
+    this.name = 'ConfigError'
+    this.missing = missing
+  }
+}
+
+export function isConfigError(err: unknown): err is ConfigError {
+  return err instanceof ConfigError || (err instanceof Error && err.name === 'ConfigError')
+}
+
 function parseOrThrow<T extends z.ZodTypeAny>(schema: T, raw: unknown, label: string): z.infer<T> {
   const result = schema.safeParse(raw)
   if (!result.success) {
     const detail = result.error.issues
       .map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`)
       .join('\n')
+    const missing = result.error.issues.map((i) => i.path.join('.') || '(root)')
     // Never print the values, only the names that failed.
-    throw new Error(`Invalid ${label} environment:\n${detail}`)
+    throw new ConfigError(`Invalid ${label} environment:\n${detail}`, missing)
   }
   return result.data
 }

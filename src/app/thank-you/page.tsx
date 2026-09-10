@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { getDb } from '@/db'
 import { downloadGrants, orders } from '@/db/schema'
 import { formatBdt, poisha } from '@/domain/money'
-import { isEntitled, STATE_LABELS_BN } from '@/domain/order-state'
+import { isEntitled, STATE_LABELS_BN, type OrderState } from '@/domain/order-state'
 import { verifyToken } from '@/lib/crypto'
-import { serverEnv } from '@/config/env'
+import { isConfigError, serverEnv } from '@/config/env'
 import { PurchaseEvent } from '@/components/Analytics'
 import { buildDownloadUrl, TOKEN_KIND_RECEIPT } from '@/services/fulfilment'
 
@@ -47,22 +47,40 @@ export default async function ThankYouPage({
     )
   }
 
-  const db = getDb()
-  const rows = await db
-    .select({
-      orderNumber: orders.orderNumber,
-      status: orders.status,
-      email: orders.email,
-      name: orders.name,
-      total: orders.totalPoisha,
-      grantPublicId: downloadGrants.publicId,
-      revokedAt: downloadGrants.revokedAt,
-    })
-    .from(orders)
-    .leftJoin(downloadGrants, eq(downloadGrants.orderId, orders.id))
-    .where(eq(orders.id, orderId))
-    .orderBy(desc(downloadGrants.createdAt))
-    .limit(1)
+  let rows: Array<{
+    orderNumber: string
+    status: OrderState
+    email: string
+    name: string
+    total: number
+    grantPublicId: string | null
+    revokedAt: Date | null
+  }>
+  try {
+    const db = getDb()
+    rows = await db
+      .select({
+        orderNumber: orders.orderNumber,
+        status: orders.status,
+        email: orders.email,
+        name: orders.name,
+        total: orders.totalPoisha,
+        grantPublicId: downloadGrants.publicId,
+        revokedAt: downloadGrants.revokedAt,
+      })
+      .from(orders)
+      .leftJoin(downloadGrants, eq(downloadGrants.orderId, orders.id))
+      .where(eq(orders.id, orderId))
+      .orderBy(desc(downloadGrants.createdAt))
+      .limit(1)
+  } catch (err) {
+    // Unconfigured deployment: say so rather than crash. A real customer can
+    // only reach this page after a payment, which cannot happen in that state.
+    if (isConfigError(err)) {
+      return <Problem body="সাইটটি এখনো সম্পূর্ণ চালু হয়নি। একটু পরে আবার চেষ্টা করুন।" />
+    }
+    throw err
+  }
 
   const order = rows[0]
   if (!order) return <Problem body="অর্ডারটি খুঁজে পাওয়া যায়নি।" />

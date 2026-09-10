@@ -50,8 +50,9 @@ function since(days: number): Date {
 
 export async function getDashboardMetrics(
   rangeDays = 30,
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<DashboardMetrics> {
+  const db = dbParam ?? getDb()
   const from = since(rangeDays)
 
   const revenueRows = await db
@@ -121,8 +122,9 @@ export async function getDashboardMetrics(
 
 export async function getRecentOrders(
   limit = 20,
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<RecentOrder[]> {
+  const db = dbParam ?? getDb()
   return db
     .select({
       id: orders.id,
@@ -149,7 +151,8 @@ export interface HealthAlert {
   message: string
 }
 
-export async function getHealthAlerts(db: Database = getDb()): Promise<HealthAlert[]> {
+export async function getHealthAlerts(dbParam?: Database): Promise<HealthAlert[]> {
+  const db = dbParam ?? getDb()
   const alerts: HealthAlert[] = []
   const from = since(1)
 

@@ -33,8 +33,9 @@ export interface LoginResult {
 
 export async function login(
   args: { email: string; password: string; ip: string; userAgent: string },
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<LoginResult> {
+  const db = dbParam ?? getDb()
   const email = args.email.trim().toLowerCase()
   const genericError = 'ইমেইল বা পাসওয়ার্ড সঠিক নয়।'
 
@@ -145,9 +146,10 @@ export async function recordAudit(
     after?: Record<string, unknown> | null
     ip?: string
   },
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<void> {
   try {
+    const db = dbParam ?? getDb()
     await db.insert(auditLogs).values({
       actorId: args.actorId,
       actorEmail: args.actorEmail,
@@ -166,7 +168,8 @@ export async function recordAudit(
 }
 
 /** Count of currently locked admin accounts, for the dashboard. */
-export async function lockedAccountCount(db: Database = getDb()): Promise<number> {
+export async function lockedAccountCount(dbParam?: Database): Promise<number> {
+  const db = dbParam ?? getDb()
   const rows = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(adminUsers)

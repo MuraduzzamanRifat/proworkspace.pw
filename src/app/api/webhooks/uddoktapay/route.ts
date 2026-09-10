@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { serverEnv } from '@/config/env'
 import { safeEqual } from '@/lib/crypto'
+import { withConfigGuard } from '@/lib/http'
 import { log } from '@/lib/logger'
 import { parseGatewayPayload, verifyPayment } from '@/payments/uddoktapay'
 import { settlePayment } from '@/services/fulfilment'
@@ -28,6 +29,10 @@ export const dynamic = 'force-dynamic'
  * and retrying is pointless once the event is recorded.
  */
 export async function POST(request: Request): Promise<Response> {
+  return withConfigGuard(() => handle(request))
+}
+
+async function handle(request: Request): Promise<Response> {
   const env = serverEnv()
   const expectedKey = env.UDDOKTAPAY_API_KEY
 

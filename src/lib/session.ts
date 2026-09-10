@@ -32,11 +32,19 @@ export interface AdminIdentity {
   sessionId: string
 }
 
+/**
+ * Every function here takes the database as an OPTIONAL parameter and
+ * resolves it inside the body. A default parameter of `getDb()` looks the
+ * same but evaluates before the body runs, so it would throw outside any
+ * try/catch below — which is exactly how an unconfigured deployment turned
+ * the login page into a crash instead of a redirect.
+ */
 export async function createSession(
   userId: string,
   meta: { ip: string; userAgent: string },
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<string> {
+  const db = dbParam ?? getDb()
   const raw = randomId(32)
   const expiresAt = new Date(Date.now() + SESSION_TTL_HOURS * 3600_000)
 
@@ -72,7 +80,7 @@ export async function createSession(
 }
 
 /** Current admin, or null. Never throws. */
-export async function getCurrentAdmin(db: Database = getDb()): Promise<AdminIdentity | null> {
+export async function getCurrentAdmin(dbParam?: Database): Promise<AdminIdentity | null> {
   try {
     const store = await cookies()
     const token = store.get(SESSION_COOKIE)?.value
@@ -87,6 +95,9 @@ export async function getCurrentAdmin(db: Database = getDb()): Promise<AdminIden
       return null
     }
 
+    // Resolved here, inside the try: an unconfigured database means "nobody
+    // is signed in", which the caller turns into a redirect to the login page.
+    const db = dbParam ?? getDb()
     const rows = await db
       .select({
         sessionId: adminSessions.id,
@@ -124,13 +135,14 @@ export async function getCurrentAdmin(db: Database = getDb()): Promise<AdminIden
   }
 }
 
-export async function destroySession(db: Database = getDb()): Promise<void> {
+export async function destroySession(dbParam?: Database): Promise<void> {
   const store = await cookies()
   const token = store.get(SESSION_COOKIE)?.value
 
   if (token) {
     try {
       const payload = verifyToken(token, serverEnv().SESSION_SECRET)
+      const db = dbParam ?? getDb()
       await db.delete(adminSessions).where(eq(adminSessions.tokenHash, sha256Hex(payload.sub)))
     } catch {
       /* an unreadable cookie is already useless; just clear it */

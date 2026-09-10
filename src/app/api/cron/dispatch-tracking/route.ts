@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { serverEnv } from '@/config/env'
 import { safeEqual } from '@/lib/crypto'
+import { withConfigGuard } from '@/lib/http'
 import { log } from '@/lib/logger'
 import { dispatchPendingTrackingEvents } from '@/services/tracking-dispatch'
 
@@ -22,6 +23,10 @@ export const maxDuration = 60
  * event_id, the request volume alone is a cheap way to burn the rate limit.
  */
 export async function GET(request: Request): Promise<Response> {
+  return withConfigGuard(() => handle(request))
+}
+
+async function handle(request: Request): Promise<Response> {
   const expected = serverEnv().CRON_SECRET
 
   if (!expected) {

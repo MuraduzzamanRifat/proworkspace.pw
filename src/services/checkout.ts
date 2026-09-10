@@ -158,8 +158,12 @@ async function loadCoupon(db: Database, code: string | null): Promise<PricingCou
 
 export async function startCheckout(
   input: StartCheckoutInput,
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<StartCheckoutResult> {
+  // Resolved in the body, not as a default parameter, so a ConfigError from
+  // an unconfigured deployment reaches the route's guard as a 503 rather
+  // than escaping as an unhandled crash.
+  const db = dbParam ?? getDb()
   const email = input.email.trim().toLowerCase()
   const name = input.name.trim()
   const phone = (input.phone ?? '').trim()

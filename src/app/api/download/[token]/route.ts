@@ -5,6 +5,7 @@ import { serverEnv } from '@/config/env'
 import { getDb } from '@/db'
 import { downloadEvents, downloadGrants, orders } from '@/db/schema'
 import { TokenError, verifyToken } from '@/lib/crypto'
+import { withConfigGuard } from '@/lib/http'
 import { log } from '@/lib/logger'
 import { clientIp, consumeRateLimit } from '@/lib/rate-limit'
 import { TOKEN_KIND_DOWNLOAD } from '@/services/fulfilment'
@@ -25,6 +26,13 @@ export const dynamic = 'force-dynamic'
  * revoked grant actually stops working.
  */
 export async function GET(
+  request: Request,
+  context: { params: Promise<{ token: string }> },
+): Promise<Response> {
+  return withConfigGuard(() => handle(request, context))
+}
+
+async function handle(
   request: Request,
   context: { params: Promise<{ token: string }> },
 ): Promise<Response> {

@@ -122,8 +122,9 @@ export interface OrderDetail {
 
 export async function getOrderDetail(
   orderNumber: string,
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<OrderDetail | null> {
+  const db = dbParam ?? getDb()
   const orderRows = await db
     .select()
     .from(orders)
@@ -236,8 +237,9 @@ export async function recordRefund(
     reason: string
     actor: AdminIdentity
   },
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<{ status: OrderState; refundedPoisha: number }> {
+  const db = dbParam ?? getDb()
   if (!hasAtLeast(args.actor.role, 'admin')) {
     throw new AdminActionError('forbidden', 'ফেরত রেকর্ড করার অনুমতি নেই।')
   }
@@ -337,8 +339,9 @@ export async function recordRefund(
 /** Re-send the delivery email to the address on the order. */
 export async function resendDelivery(
   args: { orderNumber: string; actor: AdminIdentity },
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<{ sent: boolean; reason?: string }> {
+  const db = dbParam ?? getDb()
   if (!hasAtLeast(args.actor.role, 'support')) {
     throw new AdminActionError('forbidden', 'অনুমতি নেই।')
   }
@@ -397,8 +400,9 @@ export async function resendDelivery(
 /** Manually revoke or restore download access. */
 export async function setGrantRevoked(
   args: { orderNumber: string; revoked: boolean; actor: AdminIdentity },
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<void> {
+  const db = dbParam ?? getDb()
   if (!hasAtLeast(args.actor.role, 'admin')) {
     throw new AdminActionError('forbidden', 'অনুমতি নেই।')
   }

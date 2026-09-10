@@ -61,8 +61,9 @@ const SETTLEABLE = ['pending', 'payment_pending', 'payment_failed'] as const
 export async function settlePayment(
   verified: VerifyResult,
   source: 'webhook' | 'verify',
-  db: Database = getDb(),
+  dbParam?: Database,
 ): Promise<SettlementResult> {
+  const db = dbParam ?? getDb()
   const invoiceId = verified.invoiceId
 
   // --- Audit trail. Deduplication is handled below by the conditional UPDATE,
